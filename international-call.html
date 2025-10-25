@@ -580,16 +580,23 @@
             
             async startCall() {
                 const peerId = this.peerIdInput.value.trim();
+                console.log('Попытка подключения к ID:', peerId);
+                
                 if (!peerId) {
                     this.showNotification('Введите ID участника', 'error');
                     return;
                 }
                 
                 try {
+                    console.log('Получение медиа...');
                     await this.getUserMedia();
+                    console.log('Медиа получено, инициализация Peer...');
+                    
                     this.initializePeer();
+                    console.log('Peer инициализирован, ожидание открытия...');
                     
                     this.peer.on('open', (id) => {
+                        console.log('Peer открыт, ID:', id, 'Подключение к:', peerId);
                         this.updateStatus('connecting', 'Подключение...');
                         
                         this.connection = this.peer.call(peerId, this.localStream);
@@ -603,7 +610,7 @@
                     });
                     
                 } catch (error) {
-                    console.error('Ошибка:', error);
+                    console.error('Ошибка startCall:', error);
                     this.showNotification('Ошибка: ' + error.message, 'error');
                 }
             }
