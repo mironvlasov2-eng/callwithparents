@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ручное подключение PeerJS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background: #000;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .video-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        input {
+            padding: 10px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 300px;
+        }
+        .id-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Ручное подключение PeerJS</h1>
+        <p>Подключитесь к другому участнику вручную</p>
+        
+        <div class="instructions">
+            <h3>📋 Инструкция:</h3>
+            <ol>
+                <li><strong>Первый участник:</strong> Нажмите "Начать", скопируйте ваш ID</li>
+                <li><strong>Второй участник:</strong> Нажмите "Начать", введите ID первого участника</li>
+                <li><strong>Нажмите "Подключиться"</strong> для установки соединения</li>
+            </ol>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">📹 Начать</button>
+            <button id="connectBtn" disabled>🔗 Подключиться</button>
+            <button id="stopBtn" disabled>⏹️ Остановить</button>
+        </div>
+        
+        <div class="status" id="status">Готов к подключению</div>
+        
+        <div class="id-display" id="idDisplay" style="display: none;">
+            <strong>Ваш ID:</strong> <span id="myId"></span>
+        </div>
+        
+        <div class="controls">
+            <input type="text" id="peerIdInput" placeholder="Введите ID другого участника" disabled>
+        </div>
+        
+        <div class="video-container">
+            <div>
+                <h3>Локальное видео</h3>
+                <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+            <div>
+                <h3>Удаленное видео</h3>
+                <video id="remoteVideo" autoplay playsinline></video>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        class ManualPeerJS {
+            constructor() {
+                this.localStream = null;
+                this.peer = null;
+                this.connection = null;
+                this.myId = null;
+                
+                this.startBtn = document.getElementById('startBtn');
+                this.connectBtn = document.getElementById('connectBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.status = document.getElementById('status');
+                this.localVideo = document.getElementById('localVideo');
+                this.remoteVideo = document.getElementById('remoteVideo');
+                this.idDisplay = document.getElementById('idDisplay');
+                this.myIdSpan = document.getElementById('myId');
+                this.peerIdInput = document.getElementById('peerIdInput');
+                
+                this.startBtn.onclick = () => this.start();
+                this.connectBtn.onclick = () => this.connect();
+                this.stopBtn.onclick = () => this.stop();
+            }
+            
+            async start() {
+                try {
+                    this.status.textContent = 'Запрашиваем доступ к камере...';
+                    
+                    // Получаем доступ к камере
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true
+                    });
+                    
+                    this.localVideo.srcObject = this.localStream;
+                    this.status.textContent = 'Камера включена, подключаемся к PeerJS...';
+                    
+                    // Создаем PeerJS соединение
+                    this.peer = new Peer();
+                    
+                    this.peer.on('open', (id) => {
+                        this.myId = id;
+                        this.myIdSpan.textContent = id;
+                        this.idDisplay.style.display = 'block';
+                        this.status.textContent = 'PeerJS подключен! Скопируйте ваш ID';
+                        this.peerIdInput.disabled = false;
+                        this.connectBtn.disabled = false;
+                        this.startBtn.disabled = true;
+                    });
+                    
+                    this.peer.on('call', (call) => {
+                        this.status.textContent = 'Входящий звонок...';
+                        call.answer(this.localStream);
+                        call.on('stream', (remoteStream) => {
+                            this.remoteVideo.srcObject = remoteStream;
+                            this.status.textContent = 'WebRTC соединение установлено!';
+                            
+                            // Проверяем видео через 3 секунды
+                            setTimeout(() => {
+                                console.log('Проверка видео:');
+                                console.log('- videoWidth:', this.remoteVideo.videoWidth);
+                                console.log('- videoHeight:', this.remoteVideo.videoHeight);
+                                console.log('- readyState:', this.remoteVideo.readyState);
+                                console.log('- paused:', this.remoteVideo.paused);
+                                
+                                if (this.remoteVideo.videoWidth > 0 && this.remoteVideo.videoHeight > 0) {
+                                    console.log('✅ Видео отображается!');
+                                    this.status.textContent = '✅ Видео работает!';
+                                } else {
+                                    console.log('❌ Видео не отображается');
+                                    this.status.textContent = '❌ Видео не отображается';
+                                }
+                            }, 3000);
+                        });
+                    });
+                    
+                    this.peer.on('error', (error) => {
+                        console.error('PeerJS ошибка:', error);
+                        this.status.textContent = 'Ошибка PeerJS: ' + error.message;
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    this.status.textContent = 'Ошибка: ' + error.message;
+                }
+            }
+            
+            connect() {
+                const peerId = this.peerIdInput.value.trim();
+                if (!peerId) {
+                    this.status.textContent = 'Введите ID другого участника!';
+                    return;
+                }
+                
+                try {
+                    this.status.textContent = 'Подключаемся к участнику...';
+                    this.connection = this.peer.call(peerId, this.localStream);
+                    this.connection.on('stream', (remoteStream) => {
+                        this.remoteVideo.srcObject = remoteStream;
+                        this.status.textContent = 'WebRTC соединение установлено!';
+                        
+                        // Проверяем видео через 3 секунды
+                        setTimeout(() => {
+                            console.log('Проверка видео:');
+                            console.log('- videoWidth:', this.remoteVideo.videoWidth);
+                            console.log('- videoHeight:', this.remoteVideo.videoHeight);
+                            console.log('- readyState:', this.remoteVideo.readyState);
+                            console.log('- paused:', this.remoteVideo.paused);
+                            
+                            if (this.remoteVideo.videoWidth > 0 && this.remoteVideo.videoHeight > 0) {
+                                console.log('✅ Видео отображается!');
+                                this.status.textContent = '✅ Видео работает!';
+                            } else {
+                                console.log('❌ Видео не отображается');
+                                this.status.textContent = '❌ Видео не отображается';
+                            }
+                        }, 3000);
+                    });
+                    
+                    this.connection.on('error', (error) => {
+                        console.error('Ошибка соединения:', error);
+                        this.status.textContent = 'Ошибка соединения: ' + error.message;
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка подключения:', error);
+                    this.status.textContent = 'Ошибка подключения: ' + error.message;
+                }
+            }
+            
+            stop() {
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                }
+                if (this.connection) {
+                    this.connection.close();
+                }
+                if (this.peer) {
+                    this.peer.destroy();
+                }
+                
+                this.localVideo.srcObject = null;
+                this.remoteVideo.srcObject = null;
+                
+                this.startBtn.disabled = false;
+                this.connectBtn.disabled = true;
+                this.stopBtn.disabled = true;
+                this.peerIdInput.disabled = true;
+                this.idDisplay.style.display = 'none';
+                this.status.textContent = 'Соединение остановлено';
+            }
+        }
+        
+        // Запускаем приложение
+        new ManualPeerJS();
+    </script>
+</body>
+</html>
