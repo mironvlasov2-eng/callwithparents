@@ -415,7 +415,7 @@
             
             <div class="status" id="status">Ожидание подключения</div>
             <div class="connection-info" id="connectionInfo" style="display: none;">
-                <div>Ваш ID: <span id="myId"></span></div>
+                <div>Ваш ID: <span id="myIdSpan"></span></div>
                 <div>Участник: <span id="peerId"></span></div>
             </div>
         </div>
@@ -499,6 +499,7 @@
                 this.status = document.getElementById('status');
                 this.connectionInfo = document.getElementById('connectionInfo');
                 this.myId = document.getElementById('myId');
+                this.myIdSpan = document.getElementById('myIdSpan');
                 this.peerId = document.getElementById('peerId');
                 this.localVideo = document.getElementById('localVideo');
                 this.remoteVideo = document.getElementById('remoteVideo');
@@ -598,7 +599,7 @@
                     this.initializePeer();
                     
                     this.peer.on('open', (id) => {
-                        this.myId.textContent = id;
+                        this.myIdSpan.textContent = id;
                         this.peerId.textContent = peerId;
                         this.connectionInfo.style.display = 'block';
                         this.updateStatus('connecting', 'Подключение...');
@@ -625,7 +626,7 @@
                     this.initializePeer();
                     
                     this.peer.on('open', (id) => {
-                        this.myId.textContent = id;
+                        this.myIdSpan.textContent = id;
                         this.connectionInfo.style.display = 'block';
                         this.updateStatus('waiting', 'Ожидание звонка...');
                         this.showNotification('Ожидание звонка. Ваш ID: ' + id, 'success');
