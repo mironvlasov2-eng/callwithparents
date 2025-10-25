@@ -413,10 +413,6 @@
             </div>
             
             <div class="status" id="status">Ожидание подключения</div>
-            <div class="connection-info" id="connectionInfo" style="display: none;">
-                <div>Ваш ID: <span id="myIdSpan"></span></div>
-                <div>Участник: <span id="peerId"></span></div>
-            </div>
         </div>
         
         <div class="controls" id="controls" style="display: none;">
@@ -590,9 +586,6 @@
                     this.initializePeer();
                     
                     this.peer.on('open', (id) => {
-                        this.myIdSpan.textContent = id;
-                        this.peerId.textContent = peerId;
-                        this.connectionInfo.style.display = 'block';
                         this.updateStatus('connecting', 'Подключение...');
                         
                         this.connection = this.peer.call(peerId, this.localStream);
@@ -617,14 +610,11 @@
                     this.initializePeer();
                     
                     this.peer.on('open', (id) => {
-                        this.myIdSpan.textContent = id;
-                        this.connectionInfo.style.display = 'block';
                         this.updateStatus('waiting', 'Ожидание звонка...');
                         this.showNotification('Ожидание звонка. Ваш ID: ' + id, 'success');
                     });
                     
                     this.peer.on('call', (call) => {
-                        this.peerId.textContent = call.peer;
                         this.updateStatus('connecting', 'Входящий звонок...');
                         this.connection = call;
                         this.setupConnectionHandlers();
