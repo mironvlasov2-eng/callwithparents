@@ -77,50 +77,88 @@
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 107, 53, 0.3);
+            border: 2px solid rgba(255, 107, 53, 0.4);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 12px;
             transition: all 0.3s ease;
             backdrop-filter: blur(20px);
-            background: rgba(255, 107, 53, 0.1);
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.15), rgba(255, 107, 53, 0.05));
             color: #ff6b35;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), transparent);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .control-btn:hover::before {
+            opacity: 1;
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.4), rgba(255, 107, 53, 0.2));
+            border-color: #ff6b35;
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
         }
         
         .control-btn:hover {
             transform: scale(1.1);
             border-color: #ff6b35;
-            background: rgba(255, 107, 53, 0.3);
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.3), rgba(255, 107, 53, 0.1));
             box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+            color: #ffffff;
         }
         
         .mute-btn.muted {
-            background: #ff4444;
+            background: linear-gradient(135deg, #ff4444, #ff6666);
             border-color: #ff4444;
             color: white;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
         }
         
         .video-btn.disabled {
-            background: #ff4444;
+            background: linear-gradient(135deg, #ff4444, #ff6666);
             border-color: #ff4444;
             color: white;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
         }
         
         .end-call-btn {
-            background: #ff4444;
+            background: linear-gradient(135deg, #ff4444, #ff6666);
             border-color: #ff4444;
             color: white;
             width: 70px;
             height: 70px;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
         }
         
         .end-call-btn:hover {
-            background: #ff3333;
+            background: linear-gradient(135deg, #ff3333, #ff5555);
             border-color: #ff3333;
             box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
+            transform: scale(1.1);
         }
         
         .status-bar {
@@ -317,14 +355,17 @@
             .control-btn {
                 width: 50px;
                 height: 50px;
-                font-size: 14px;
+                font-size: 10px;
                 font-weight: 700;
+                letter-spacing: 0.5px;
             }
             
             .end-call-btn {
                 width: 60px;
                 height: 60px;
-                font-size: 16px;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
             }
             
             .status-bar {
