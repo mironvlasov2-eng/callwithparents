@@ -223,6 +223,50 @@
             font-size: 1.1em;
         }
         
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .join-section {
+            margin-top: 20px;
+        }
+        
+        .room-id-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .room-id-container input {
+            flex: 1;
+        }
+        
+        .btn-copy {
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .btn-copy:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+        }
+        
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+        
         .input-group {
             margin-bottom: 20px;
         }
@@ -400,12 +444,26 @@
                 <h1>Позвонить родителям</h1>
                 <p>Международные видеозвонки с улучшенным соединением</p>
                 
-                <div class="input-group">
-                    <input type="text" id="peerIdInput" placeholder="Введите ID участника для подключения">
+                <div class="action-buttons">
+                    <button class="btn" id="createRoomBtn">Создать комнату</button>
+                    <button class="btn secondary" id="joinRoomBtn">Присоединиться к комнате</button>
                 </div>
                 
-                <button class="btn" id="startCallBtn">Начать звонок</button>
-                <button class="btn secondary" id="waitForCallBtn">Ждать звонка</button>
+                <div class="join-section" id="joinSection" style="display: none;">
+                    <div class="input-group">
+                        <input type="text" id="peerIdInput" placeholder="Введите ID комнаты">
+                    </div>
+                    <button class="btn" id="startCallBtn">Присоединиться</button>
+                </div>
+                
+                <div id="myIdDisplay" style="display: none; margin-top: 20px;">
+                    <p><strong>Ваш ID:</strong></p>
+                    <div class="room-id-container">
+                        <input type="text" id="myId" readonly style="font-family: monospace; font-size: 18px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid rgba(255,107,53,0.3); color: white; width: 100%; margin-bottom: 10px;">
+                        <button class="btn-copy" id="copyRoomIdBtn" style="background: linear-gradient(135deg, #ff6b35, #ff8c42); border: none; color: white; padding: 10px 15px; border-radius: 10px; cursor: pointer; font-size: 16px;">📋 Копировать</button>
+                    </div>
+                    <p style="font-size: 14px; opacity: 0.8; margin-top: 10px;">Поделитесь этим ID с другим участником</p>
+                </div>
                 
                 <div style="margin-top: 30px; padding: 20px; background: rgba(255, 107, 53, 0.1); border-radius: 10px; border: 1px solid rgba(255, 107, 53, 0.3);">
                     <h3 style="color: #ff6b35; margin-bottom: 10px;">🌍 Международные звонки</h3>
@@ -448,17 +506,75 @@
                 this.videoBtn = document.getElementById('videoBtn');
                 this.endCallBtn = document.getElementById('endCallBtn');
                 this.startCallBtn = document.getElementById('startCallBtn');
-                this.waitForCallBtn = document.getElementById('waitForCallBtn');
+                this.createRoomBtn = document.getElementById('createRoomBtn');
+                this.joinRoomBtn = document.getElementById('joinRoomBtn');
+                this.copyRoomIdBtn = document.getElementById('copyRoomIdBtn');
+                this.joinSection = document.getElementById('joinSection');
+                this.myIdDisplay = document.getElementById('myIdDisplay');
                 this.peerIdInput = document.getElementById('peerIdInput');
                 this.notification = document.getElementById('notification');
             }
             
             bindEvents() {
                 this.startCallBtn.addEventListener('click', () => this.startCall());
-                this.waitForCallBtn.addEventListener('click', () => this.waitForCall());
+                this.createRoomBtn.addEventListener('click', () => this.createRoom());
+                this.joinRoomBtn.addEventListener('click', () => this.showJoinSection());
+                this.copyRoomIdBtn.addEventListener('click', () => this.copyRoomId());
                 this.muteBtn.addEventListener('click', () => this.toggleAudio());
                 this.videoBtn.addEventListener('click', () => this.toggleVideo());
                 this.endCallBtn.addEventListener('click', () => this.endCall());
+            }
+            
+            async createRoom() {
+                try {
+                    await this.getUserMedia();
+                    this.initializePeer();
+                    
+                    this.peer.on('open', (id) => {
+                        this.myId.value = id;
+                        this.myIdDisplay.style.display = 'block';
+                        this.updateStatus('waiting', 'Ожидание подключения...');
+                        this.showNotification('Комната создана! Скопируйте ID и поделитесь им', 'success');
+                    });
+                    
+                    this.peer.on('call', (call) => {
+                        this.peerId.textContent = call.peer;
+                        this.updateStatus('connecting', 'Входящий звонок...');
+                        this.connection = call;
+                        this.setupConnectionHandlers();
+                        call.answer(this.localStream);
+                    });
+                    
+                    this.peer.on('error', (error) => {
+                        console.error('PeerJS ошибка:', error);
+                        this.updateStatus('error', 'Ошибка соединения');
+                        this.showNotification('Ошибка: ' + error.message, 'error');
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    this.showNotification('Ошибка: ' + error.message, 'error');
+                }
+            }
+            
+            showJoinSection() {
+                this.joinSection.style.display = 'block';
+                this.createRoomBtn.style.display = 'none';
+                this.joinRoomBtn.style.display = 'none';
+            }
+            
+            copyRoomId() {
+                const roomId = this.myId.value;
+                if (roomId) {
+                    navigator.clipboard.writeText(roomId).then(() => {
+                        this.showNotification('ID скопирован в буфер обмена!', 'success');
+                    }).catch(() => {
+                        // Fallback для старых браузеров
+                        this.myId.select();
+                        document.execCommand('copy');
+                        this.showNotification('ID скопирован!', 'success');
+                    });
+                }
             }
             
             async startCall() {
