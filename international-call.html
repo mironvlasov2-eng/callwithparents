@@ -527,10 +527,17 @@
             
             async createRoom() {
                 try {
+                    console.log('Создание комнаты...');
+                    this.updateStatus('connecting', 'Получение доступа к камере...');
+                    
                     await this.getUserMedia();
+                    console.log('Медиа получено, инициализация Peer...');
+                    
                     this.initializePeer();
+                    console.log('Peer инициализирован, ожидание ID...');
                     
                     this.peer.on('open', (id) => {
+                        console.log('Peer открыт, ID:', id);
                         this.myId.value = id;
                         this.myIdDisplay.style.display = 'block';
                         this.updateStatus('waiting', 'Ожидание подключения...');
@@ -538,6 +545,7 @@
                     });
                     
                     this.peer.on('call', (call) => {
+                        console.log('Входящий звонок от:', call.peer);
                         this.peerId.textContent = call.peer;
                         this.updateStatus('connecting', 'Входящий звонок...');
                         this.connection = call;
@@ -552,7 +560,8 @@
                     });
                     
                 } catch (error) {
-                    console.error('Ошибка:', error);
+                    console.error('Ошибка создания комнаты:', error);
+                    this.updateStatus('error', 'Ошибка создания комнаты');
                     this.showNotification('Ошибка: ' + error.message, 'error');
                 }
             }
