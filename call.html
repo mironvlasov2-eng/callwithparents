@@ -12,9 +12,9 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a2a2a 100%);
+            color: #ffffff;
             height: 100vh;
             overflow: hidden;
         }
@@ -44,17 +44,19 @@
             right: 20px;
             width: 200px;
             height: 150px;
-            border-radius: 15px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            border: 2px solid #ff6b35;
             object-fit: cover;
             background: #000;
             z-index: 10;
             transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
         }
         
         .local-video:hover {
             transform: scale(1.05);
-            border-color: rgba(255, 255, 255, 0.6);
+            border-color: #ff6b35;
+            box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
         }
         
         .controls-panel {
@@ -62,77 +64,88 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
             padding: 30px 20px 20px;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 20px;
+            backdrop-filter: blur(20px);
         }
         
         .control-btn {
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            border: none;
+            border: 2px solid rgba(255, 255, 255, 0.2);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
         }
         
         .control-btn:hover {
             transform: scale(1.1);
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.2);
         }
         
         .mute-btn {
-            background: rgba(255, 255, 255, 0.2);
             color: white;
         }
         
         .mute-btn.muted {
             background: #ff4444;
+            border-color: #ff4444;
             color: white;
         }
         
         .video-btn {
-            background: rgba(255, 255, 255, 0.2);
             color: white;
         }
         
         .video-btn.disabled {
             background: #ff4444;
+            border-color: #ff4444;
             color: white;
         }
         
         .end-call-btn {
             background: #ff4444;
+            border-color: #ff4444;
             color: white;
             width: 70px;
             height: 70px;
+        }
+        
+        .end-call-btn:hover {
+            background: #ff3333;
+            border-color: #ff3333;
         }
         
         .status-bar {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px 20px;
             border-radius: 25px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             display: flex;
             align-items: center;
             gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .status-indicator {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #4CAF50;
+            background: #ff6b35;
             animation: pulse 2s infinite;
         }
         
@@ -141,7 +154,7 @@
         }
         
         .status-indicator.error {
-            background: #f44336;
+            background: #ff4444;
             animation: none;
         }
         
@@ -155,11 +168,12 @@
             position: absolute;
             top: 20px;
             right: 240px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 10px 15px;
             border-radius: 20px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .welcome-screen {
@@ -168,7 +182,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a2a2a 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -180,14 +194,19 @@
             text-align: center;
             max-width: 500px;
             padding: 40px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 20px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .welcome-content h1 {
             font-size: 2.5em;
             margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff6b35, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .welcome-content p {
@@ -197,7 +216,7 @@
         }
         
         .btn {
-            background: #4CAF50;
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
             color: white;
             border: none;
             padding: 15px 30px;
@@ -206,19 +225,24 @@
             cursor: pointer;
             transition: all 0.3s ease;
             margin: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
         }
         
         .btn:hover {
-            background: #45a049;
+            background: linear-gradient(45deg, #ff8c42, #ff6b35);
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
         }
         
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #ff6b35;
         }
         
         .input-group {
@@ -227,33 +251,40 @@
         
         .input-group input {
             padding: 15px;
-            border: none;
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 25px;
             font-size: 16px;
             width: 100%;
             max-width: 300px;
             text-align: center;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            backdrop-filter: blur(10px);
         }
         
         .input-group input:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.3);
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
         
         .notification {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 15px 20px;
             border-radius: 10px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             z-index: 1000;
             transform: translateX(400px);
             transition: transform 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .notification.show {
@@ -261,15 +292,15 @@
         }
         
         .notification.success {
-            border-left: 4px solid #4CAF50;
+            border-left: 4px solid #ff6b35;
         }
         
         .notification.error {
-            border-left: 4px solid #f44336;
+            border-left: 4px solid #ff4444;
         }
         
         .notification.info {
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #ff6b35;
         }
         
         @media (max-width: 768px) {
@@ -347,8 +378,8 @@
     <!-- Экран приветствия -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
-            <h1>📞 Call With Parents</h1>
-            <p>Бесплатные видеозвонки 1 на 1</p>
+            <h1>🌙 MOONK Video Call</h1>
+            <p>Премиум видеозвонки 1 на 1</p>
             
             <div class="input-group">
                 <input type="text" id="peerIdInput" placeholder="Введите ID участника для подключения">
