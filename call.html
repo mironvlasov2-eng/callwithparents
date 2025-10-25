@@ -516,8 +516,54 @@
                     
                     this.localVideo.srcObject = this.localStream;
                     
-                    // Создаем PeerJS соединение
-                    this.peer = new Peer();
+                    // Создаем PeerJS соединение с TURN серверами для международных соединений
+                    const peerConfig = {
+                        config: {
+                            iceServers: [
+                                // STUN серверы
+                                { urls: 'stun:stun.l.google.com:19302' },
+                                { urls: 'stun:stun1.l.google.com:19302' },
+                                { urls: 'stun:stun2.l.google.com:19302' },
+                                { urls: 'stun:stun3.l.google.com:19302' },
+                                { urls: 'stun:stun4.l.google.com:19302' },
+                                { urls: 'stun:stun.ekiga.net' },
+                                { urls: 'stun:stun.ideasip.com' },
+                                { urls: 'stun:stun.schlund.de' },
+                                { urls: 'stun:stun.stunprotocol.org:3478' },
+                                { urls: 'stun:stun.voiparound.com' },
+                                { urls: 'stun:stun.voipbuster.com' },
+                                { urls: 'stun:stun.voipstunt.com' },
+                                { urls: 'stun:stun.counterpath.com' },
+                                { urls: 'stun:stun.1und1.de' },
+                                { urls: 'stun:stun.gmx.net' },
+                                { urls: 'stun:stun.callwithus.com' },
+                                { urls: 'stun:stun.internetcalls.com' },
+                                // TURN серверы для международных соединений
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:80',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:443',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                }
+                            ]
+                        }
+                    };
+                    
+                    this.peer = new Peer(peerConfig);
                     
                     this.peer.on('open', (id) => {
                         this.myId.textContent = id;
@@ -564,8 +610,54 @@
                     
                     this.localVideo.srcObject = this.localStream;
                     
-                    // Создаем PeerJS соединение
-                    this.peer = new Peer();
+                    // Создаем PeerJS соединение с TURN серверами для международных соединений
+                    const peerConfig = {
+                        config: {
+                            iceServers: [
+                                // STUN серверы
+                                { urls: 'stun:stun.l.google.com:19302' },
+                                { urls: 'stun:stun1.l.google.com:19302' },
+                                { urls: 'stun:stun2.l.google.com:19302' },
+                                { urls: 'stun:stun3.l.google.com:19302' },
+                                { urls: 'stun:stun4.l.google.com:19302' },
+                                { urls: 'stun:stun.ekiga.net' },
+                                { urls: 'stun:stun.ideasip.com' },
+                                { urls: 'stun:stun.schlund.de' },
+                                { urls: 'stun:stun.stunprotocol.org:3478' },
+                                { urls: 'stun:stun.voiparound.com' },
+                                { urls: 'stun:stun.voipbuster.com' },
+                                { urls: 'stun:stun.voipstunt.com' },
+                                { urls: 'stun:stun.counterpath.com' },
+                                { urls: 'stun:stun.1und1.de' },
+                                { urls: 'stun:stun.gmx.net' },
+                                { urls: 'stun:stun.callwithus.com' },
+                                { urls: 'stun:stun.internetcalls.com' },
+                                // TURN серверы для международных соединений
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:80',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:443',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                { 
+                                    urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                }
+                            ]
+                        }
+                    };
+                    
+                    this.peer = new Peer(peerConfig);
                     
                     this.peer.on('open', (id) => {
                         this.updateStatus('connecting', 'Подключение...');
