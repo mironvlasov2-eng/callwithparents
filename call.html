@@ -755,7 +755,14 @@
             
             setupConnectionHandlers() {
                 this.connection.on('stream', (remoteStream) => {
+                    console.log('Получен удаленный поток:', remoteStream);
                     this.remoteVideo.srcObject = remoteStream;
+                    
+                    // Принудительное воспроизведение для удаленного видео
+                    this.remoteVideo.play().catch(e => {
+                        console.log('Ошибка воспроизведения удаленного видео:', e);
+                    });
+                    
                     this.isConnected = true;
                     this.updateStatus('connected', 'Соединение установлено');
                     this.showNotification('Соединение установлено!', 'success');
