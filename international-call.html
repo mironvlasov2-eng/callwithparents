@@ -539,7 +539,6 @@
                     this.peer.on('call', (call) => {
                         console.log('Входящий звонок от:', call.peer);
                         console.log('Локальный поток для ответа:', this.localStream);
-                        this.peerId.textContent = call.peer;
                         this.updateStatus('connecting', 'Входящий звонок...');
                         this.connection = call;
                         this.setupConnectionHandlers();
@@ -628,10 +627,12 @@
                     });
                     
                     this.peer.on('call', (call) => {
+                        console.log('Входящий звонок в waitForCall от:', call.peer);
                         this.updateStatus('connecting', 'Входящий звонок...');
                         this.connection = call;
                         this.setupConnectionHandlers();
                         call.answer(this.localStream);
+                        console.log('Ответ на звонок в waitForCall отправлен');
                     });
                     
                     this.peer.on('error', (error) => {
