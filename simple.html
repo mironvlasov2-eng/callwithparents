@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call With Parents - Простая версия</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>👩‍👦 Call With Parents</h1>
+      <p>Простая версия без серверов</p>
+    </header>
+
+    <div class="main-content">
+      <div class="welcome-card">
+        <h2>Локальное тестирование</h2>
+        <p>Эта версия работает только для локального тестирования камеры и микрофона</p>
+        
+        <div class="video-container">
+          <div class="video-wrapper">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="video-label">Ваша камера</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="startBtn" class="btn btn-primary">📹 Включить камеру</button>
+          <button id="stopBtn" class="btn btn-secondary" disabled>⏹ Остановить</button>
+          <button id="toggleVideo" class="btn btn-secondary" disabled>📹 Выкл/Вкл видео</button>
+          <button id="toggleAudio" class="btn btn-secondary" disabled>🎤 Выкл/Вкл микрофон</button>
+        </div>
+
+        <div class="info">
+          <p><strong>Примечание:</strong> Для полноценных видеозвонков используйте основную версию с PeerJS</p>
+          <a href="index.html" class="btn btn-primary">← Вернуться к основной версии</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="notifications" class="notifications"></div>
+  </div>
+
+  <script>
+    class SimpleVideoApp {
+      constructor() {
+        this.localStream = null;
+        this.isVideoEnabled = true;
+        this.isAudioEnabled = true;
+        
+        this.initializeElements();
+        this.bindEvents();
+      }
+
+      initializeElements() {
+        this.localVideo = document.getElementById('localVideo');
+        this.startBtn = document.getElementById('startBtn');
+        this.stopBtn = document.getElementById('stopBtn');
+        this.toggleVideoBtn = document.getElementById('toggleVideo');
+        this.toggleAudioBtn = document.getElementById('toggleAudio');
+        this.notifications = document.getElementById('notifications');
+      }
+
+      bindEvents() {
+        this.startBtn.addEventListener('click', () => this.startCamera());
+        this.stopBtn.addEventListener('click', () => this.stopCamera());
+        this.toggleVideoBtn.addEventListener('click', () => this.toggleVideo());
+        this.toggleAudioBtn.addEventListener('click', () => this.toggleAudio());
+      }
+
+      async startCamera() {
+        try {
+          this.localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+          });
+          
+          this.localVideo.srcObject = this.localStream;
+          
+          this.startBtn.disabled = true;
+          this.stopBtn.disabled = false;
+          this.toggleVideoBtn.disabled = false;
+          this.toggleAudioBtn.disabled = false;
+          
+          this.showNotification('Камера и микрофон включены', 'success');
+          
+        } catch (error) {
+          console.error('Failed to get user media:', error);
+          this.showNotification('Не удалось получить доступ к камере и микрофону', 'error');
+        }
+      }
+
+      stopCamera() {
+        if (this.localStream) {
+          this.localStream.getTracks().forEach(track => track.stop());
+          this.localStream = null;
+          this.localVideo.srcObject = null;
+          
+          this.startBtn.disabled = false;
+          this.stopBtn.disabled = true;
+          this.toggleVideoBtn.disabled = true;
+          this.toggleAudioBtn.disabled = true;
+          
+          this.showNotification('Камера и микрофон отключены', 'success');
+        }
+      }
+
+      toggleVideo() {
+        if (this.localStream) {
+          const videoTrack = this.localStream.getVideoTracks()[0];
+          if (videoTrack) {
+            videoTrack.enabled = !videoTrack.enabled;
+            this.isVideoEnabled = videoTrack.enabled;
+            this.toggleVideoBtn.textContent = this.isVideoEnabled ? '📹 Выкл видео' : '📹 Вкл видео';
+            this.toggleVideoBtn.classList.toggle('muted', !this.isVideoEnabled);
+          }
+        }
+      }
+
+      toggleAudio() {
+        if (this.localStream) {
+          const audioTrack = this.localStream.getAudioTracks()[0];
+          if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            this.isAudioEnabled = audioTrack.enabled;
+            this.toggleAudioBtn.textContent = this.isAudioEnabled ? '🎤 Выкл микрофон' : '🎤 Вкл микрофон';
+            this.toggleAudioBtn.classList.toggle('muted', !this.isAudioEnabled);
+          }
+        }
+      }
+
+      showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        this.notifications.appendChild(notification);
+        
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 3000);
+      }
+    }
+
+    // Инициализируем приложение
+    document.addEventListener('DOMContentLoaded', () => {
+      new SimpleVideoApp();
+    });
+  </script>
+</body>
+</html>
