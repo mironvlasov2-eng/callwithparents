@@ -122,6 +122,7 @@
                     this.roomId = 'simple-test';
                     this.userId = 'user-' + Math.random().toString(36).substr(2, 9);
                     
+                    // Попробуем подключиться к локальному серверу
                     this.signalingSocket = new WebSocket(`ws://localhost:3000?room=${this.roomId}&user=${this.userId}`);
                     
                     this.signalingSocket.onopen = () => {
