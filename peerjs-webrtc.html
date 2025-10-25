@@ -133,6 +133,9 @@
                         this.status.textContent = `PeerJS подключен! ID: ${id}`;
                         this.startBtn.disabled = true;
                         this.stopBtn.disabled = false;
+                        
+                        // Пытаемся найти другого участника
+                        this.findOtherParticipant();
                     });
                     
                     this.peer.on('call', (call) => {
@@ -169,6 +172,51 @@
                 } catch (error) {
                     console.error('Ошибка:', error);
                     this.status.textContent = 'Ошибка: ' + error.message;
+                }
+            }
+            
+            findOtherParticipant() {
+                // Пытаемся найти другого участника в той же комнате
+                const otherPeerId = this.roomId.replace(this.peer.id, '');
+                if (otherPeerId && otherPeerId !== this.peer.id) {
+                    this.status.textContent = 'Пытаемся подключиться к другому участнику...';
+                    this.callOtherParticipant(otherPeerId);
+                } else {
+                    this.status.textContent = 'Ожидание другого участника...';
+                    // Показываем ID для подключения
+                    setTimeout(() => {
+                        this.status.textContent = `Ваш ID: ${this.peer.id}. Откройте эту же ссылку на другом устройстве!`;
+                    }, 2000);
+                }
+            }
+            
+            callOtherParticipant(peerId) {
+                try {
+                    this.connection = this.peer.call(peerId, this.localStream);
+                    this.connection.on('stream', (remoteStream) => {
+                        this.remoteVideo.srcObject = remoteStream;
+                        this.status.textContent = 'WebRTC соединение установлено!';
+                        
+                        // Проверяем видео через 3 секунды
+                        setTimeout(() => {
+                            console.log('Проверка видео:');
+                            console.log('- videoWidth:', this.remoteVideo.videoWidth);
+                            console.log('- videoHeight:', this.remoteVideo.videoHeight);
+                            console.log('- readyState:', this.remoteVideo.readyState);
+                            console.log('- paused:', this.remoteVideo.paused);
+                            
+                            if (this.remoteVideo.videoWidth > 0 && this.remoteVideo.videoHeight > 0) {
+                                console.log('✅ Видео отображается!');
+                                this.status.textContent = '✅ Видео работает!';
+                            } else {
+                                console.log('❌ Видео не отображается');
+                                this.status.textContent = '❌ Видео не отображается';
+                            }
+                        }, 3000);
+                    });
+                } catch (error) {
+                    console.error('Ошибка подключения:', error);
+                    this.status.textContent = 'Ошибка подключения: ' + error.message;
                 }
             }
             
