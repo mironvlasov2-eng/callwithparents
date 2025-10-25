@@ -1,0 +1,24 @@
+{
+  "name": "callwithparents",
+  "version": "1.0.0",
+  "description": "Бесплатные видеозвонки 1 на 1 с WebRTC",
+  "main": "signaling-server.js",
+  "scripts": {
+    "start": "node signaling-server.js",
+    "dev": "nodemon signaling-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "webrtc",
+    "video-call",
+    "signaling",
+    "websocket"
+  ],
+  "author": "mironvlasov2-eng",
+  "license": "MIT"
+}

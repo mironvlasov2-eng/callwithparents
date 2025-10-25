@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call With Parents - Прямое WebRTC соединение</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>👩‍👦 Call With Parents</h1>
+      <p>Прямое WebRTC соединение</p>
+    </header>
+
+    <div class="main-content">
+      <!-- Экран приветствия -->
+      <div id="welcomeScreen" class="screen active">
+        <div class="welcome-card">
+          <h2>Добро пожаловать!</h2>
+          <p>Создайте комнату или присоединитесь к существующей</p>
+          
+          <div class="action-buttons">
+            <button id="createRoomBtn" class="btn btn-primary">
+              📞 Создать комнату
+            </button>
+            <button id="joinRoomBtn" class="btn btn-secondary">
+              🔗 Присоединиться
+            </button>
+          </div>
+
+          <div id="joinForm" class="join-form hidden">
+            <input id="roomIdInput" type="text" placeholder="Введите ID комнаты" />
+            <button id="joinBtn" class="btn btn-primary">Присоединиться</button>
+            <button id="cancelJoinBtn" class="btn btn-secondary">Отмена</button>
+          </div>
+
+          <div class="fallback-info">
+            <p><small>Для работы нужен сигнальный сервер</small></p>
+            <a href="index.html" class="btn btn-secondary" style="font-size: 0.9rem;">
+              ← Вернуться к основной версии
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Экран видеозвонка -->
+      <div id="callScreen" class="screen">
+        <div class="video-container">
+          <div class="video-wrapper">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div class="video-label">Участник</div>
+          </div>
+          
+          <div class="video-wrapper local-video">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="video-label">Вы</div>
+            <div class="video-controls">
+              <button id="toggleVideo" class="control-btn" title="Включить/выключить видео">
+                📹
+              </button>
+              <button id="toggleAudio" class="control-btn" title="Включить/выключить микрофон">
+                🎤
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="call-controls">
+          <button id="endCallBtn" class="btn btn-danger">
+            📞 Завершить звонок
+          </button>
+        </div>
+
+        <div class="call-info">
+          <p id="callStatus">Подключение...</p>
+          <p id="roomIdDisplay"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notifications" class="notifications"></div>
+  </div>
+
+  <script>
+    class DirectWebRTCApp {
+      constructor() {
+        this.localStream = null;
+        this.peerConnection = null;
+        this.signalingSocket = null;
+        this.roomId = null;
+        this.userId = null;
+        this.isVideoEnabled = true;
+        this.isAudioEnabled = true;
+        
+        // Настройки сигнального сервера
+        this.signalingServer = 'ws://localhost:3000';
+        
+        this.initializeElements();
+        this.bindEvents();
+      }
+
+      initializeElements() {
+        // Screen elements
+        this.welcomeScreen = document.getElementById('welcomeScreen');
+        this.callScreen = document.getElementById('callScreen');
+        
+        // Video elements
+        this.localVideo = document.getElementById('localVideo');
+        this.remoteVideo = document.getElementById('remoteVideo');
+        
+        // Welcome screen elements
+        this.createRoomBtn = document.getElementById('createRoomBtn');
+        this.joinRoomBtn = document.getElementById('joinRoomBtn');
+        this.joinForm = document.getElementById('joinForm');
+        this.roomIdInput = document.getElementById('roomIdInput');
+        this.joinBtn = document.getElementById('joinBtn');
+        this.cancelJoinBtn = document.getElementById('cancelJoinBtn');
+        
+        // Call screen elements
+        this.toggleVideoBtn = document.getElementById('toggleVideo');
+        this.toggleAudioBtn = document.getElementById('toggleAudio');
+        this.endCallBtn = document.getElementById('endCallBtn');
+        this.callStatus = document.getElementById('callStatus');
+        this.roomIdDisplay = document.getElementById('roomIdDisplay');
+        
+        // Notifications
+        this.notifications = document.getElementById('notifications');
+      }
+
+      bindEvents() {
+        // Welcome screen events
+        this.createRoomBtn.addEventListener('click', () => this.createRoom());
+        this.joinRoomBtn.addEventListener('click', () => this.showJoinForm());
+        this.joinBtn.addEventListener('click', () => this.joinRoom());
+        this.cancelJoinBtn.addEventListener('click', () => this.hideJoinForm());
+        
+        // Call screen events
+        this.toggleVideoBtn.addEventListener('click', () => this.toggleVideo());
+        this.toggleAudioBtn.addEventListener('click', () => this.toggleAudio());
+        this.endCallBtn.addEventListener('click', () => this.endCall());
+        
+        // Room ID input
+        this.roomIdInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') this.joinRoom();
+        });
+      }
+
+      async createRoom() {
+        try {
+          await this.getUserMedia();
+          this.roomId = this.generateRoomId();
+          this.userId = this.generateUserId();
+          this.roomIdDisplay.textContent = `ID комнаты: ${this.roomId}`;
+          this.callStatus.textContent = 'Ожидание подключения...';
+          this.showCallScreen();
+          this.connectToSignalingServer();
+          this.showNotification('Комната создана! Поделитесь ID с собеседником', 'success');
+        } catch (error) {
+          console.error('Failed to create room:', error);
+          this.showNotification('Не удалось создать комнату', 'error');
+        }
+      }
+
+      showJoinForm() {
+        this.joinForm.classList.remove('hidden');
+        this.joinRoomBtn.style.display = 'none';
+      }
+
+      hideJoinForm() {
+        this.joinForm.classList.add('hidden');
+        this.joinRoomBtn.style.display = 'inline-block';
+        this.roomIdInput.value = '';
+      }
+
+      async joinRoom() {
+        const roomId = this.roomIdInput.value.trim();
+        if (!roomId) {
+          this.showNotification('Введите ID комнаты', 'error');
+          return;
+        }
+
+        try {
+          await this.getUserMedia();
+          this.roomId = roomId;
+          this.userId = this.generateUserId();
+          this.roomIdDisplay.textContent = `ID комнаты: ${this.roomId}`;
+          this.callStatus.textContent = 'Подключение...';
+          this.showCallScreen();
+          this.connectToSignalingServer();
+        } catch (error) {
+          console.error('Failed to join room:', error);
+          this.showNotification('Не удалось присоединиться к комнате', 'error');
+        }
+      }
+
+      async getUserMedia() {
+        if (!this.localStream) {
+          try {
+            this.localStream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: true
+            });
+            this.localVideo.srcObject = this.localStream;
+          } catch (error) {
+            console.error('Failed to get user media:', error);
+            this.showNotification('Не удалось получить доступ к камере и микрофону', 'error');
+            throw error;
+          }
+        }
+      }
+
+      connectToSignalingServer() {
+        try {
+          this.signalingSocket = new WebSocket(`${this.signalingServer}?room=${this.roomId}&user=${this.userId}`);
+          
+          this.signalingSocket.onopen = () => {
+            console.log('Подключение к сигнальному серверу установлено');
+            this.showNotification('Подключение к серверу установлено', 'success');
+          };
+          
+          this.signalingSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            this.handleSignalingMessage(data);
+          };
+          
+          this.signalingSocket.onclose = () => {
+            console.log('Соединение с сигнальным сервером закрыто');
+            this.showNotification('Соединение с сервером потеряно', 'error');
+          };
+          
+          this.signalingSocket.onerror = (error) => {
+            console.error('Ошибка сигнального сервера:', error);
+            this.showNotification('Ошибка подключения к серверу', 'error');
+          };
+          
+        } catch (error) {
+          console.error('Failed to connect to signaling server:', error);
+          this.showNotification('Не удалось подключиться к сигнальному серверу', 'error');
+        }
+      }
+
+      handleSignalingMessage(data) {
+        switch (data.type) {
+          case 'room-joined':
+            console.log('Присоединение к комнате:', data);
+            this.callStatus.textContent = 'В комнате, ожидание участников...';
+            break;
+            
+          case 'user-joined':
+            console.log('Новый участник:', data.userId);
+            this.callStatus.textContent = 'Участник присоединился, установка соединения...';
+            this.createPeerConnection();
+            break;
+            
+          case 'user-left':
+            console.log('Участник покинул:', data.userId);
+            this.handleCallEnd();
+            break;
+            
+          case 'offer':
+            this.handleOffer(data);
+            break;
+            
+          case 'answer':
+            this.handleAnswer(data);
+            break;
+            
+          case 'ice-candidate':
+            this.handleIceCandidate(data);
+            break;
+        }
+      }
+
+      async createPeerConnection() {
+        const configuration = {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        };
+        
+        this.peerConnection = new RTCPeerConnection(configuration);
+        
+        // Добавляем локальный поток
+        this.localStream.getTracks().forEach(track => {
+          this.peerConnection.addTrack(track, this.localStream);
+        });
+        
+        // Обработка входящих потоков
+        this.peerConnection.ontrack = (event) => {
+          console.log('Получен удаленный поток');
+          this.remoteVideo.srcObject = event.streams[0];
+          this.callStatus.textContent = 'Соединение установлено';
+          this.showNotification('Соединение установлено!', 'success');
+        };
+        
+        // Обработка ICE кандидатов
+        this.peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            this.sendSignalingMessage({
+              type: 'ice-candidate',
+              candidate: event.candidate
+            });
+          }
+        };
+        
+        // Создаем offer
+        const offer = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(offer);
+        
+        this.sendSignalingMessage({
+          type: 'offer',
+          offer: offer
+        });
+      }
+
+      async handleOffer(data) {
+        if (!this.peerConnection) {
+          await this.createPeerConnection();
+        }
+        
+        await this.peerConnection.setRemoteDescription(data.offer);
+        const answer = await this.peerConnection.createAnswer();
+        await this.peerConnection.setLocalDescription(answer);
+        
+        this.sendSignalingMessage({
+          type: 'answer',
+          answer: answer
+        });
+      }
+
+      async handleAnswer(data) {
+        await this.peerConnection.setRemoteDescription(data.answer);
+      }
+
+      async handleIceCandidate(data) {
+        if (this.peerConnection) {
+          await this.peerConnection.addIceCandidate(data.candidate);
+        }
+      }
+
+      sendSignalingMessage(message) {
+        if (this.signalingSocket && this.signalingSocket.readyState === WebSocket.OPEN) {
+          this.signalingSocket.send(JSON.stringify(message));
+        }
+      }
+
+      toggleVideo() {
+        if (this.localStream) {
+          const videoTrack = this.localStream.getVideoTracks()[0];
+          if (videoTrack) {
+            videoTrack.enabled = !videoTrack.enabled;
+            this.isVideoEnabled = videoTrack.enabled;
+            this.toggleVideoBtn.textContent = this.isVideoEnabled ? '📹' : '📹';
+            this.toggleVideoBtn.classList.toggle('muted', !this.isVideoEnabled);
+          }
+        }
+      }
+
+      toggleAudio() {
+        if (this.localStream) {
+          const audioTrack = this.localStream.getAudioTracks()[0];
+          if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            this.isAudioEnabled = audioTrack.enabled;
+            this.toggleAudioBtn.textContent = this.isAudioEnabled ? '🎤' : '🎤';
+            this.toggleAudioBtn.classList.toggle('muted', !this.isAudioEnabled);
+          }
+        }
+      }
+
+      endCall() {
+        if (this.signalingSocket) {
+          this.signalingSocket.close();
+        }
+        this.handleCallEnd();
+      }
+
+      handleCallEnd() {
+        if (this.peerConnection) {
+          this.peerConnection.close();
+          this.peerConnection = null;
+        }
+        this.remoteVideo.srcObject = null;
+        this.showWelcomeScreen();
+        this.showNotification('Звонок завершен', 'success');
+      }
+
+      showWelcomeScreen() {
+        this.welcomeScreen.classList.add('active');
+        this.callScreen.classList.remove('active');
+        this.hideJoinForm();
+      }
+
+      showCallScreen() {
+        this.welcomeScreen.classList.remove('active');
+        this.callScreen.classList.add('active');
+      }
+
+      showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        this.notifications.appendChild(notification);
+        
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 5000);
+      }
+
+      generateRoomId() {
+        return Math.random().toString(36).substr(2, 9);
+      }
+
+      generateUserId() {
+        return Math.random().toString(36).substr(2, 9);
+      }
+    }
+
+    // Инициализируем приложение
+    document.addEventListener('DOMContentLoaded', () => {
+      new DirectWebRTCApp();
+    });
+  </script>
+</body>
+</html>
