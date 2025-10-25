@@ -77,34 +77,29 @@
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 107, 53, 0.3);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             transition: all 0.3s ease;
             backdrop-filter: blur(20px);
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 107, 53, 0.1);
+            color: #ff6b35;
+            font-weight: 600;
         }
         
         .control-btn:hover {
             transform: scale(1.1);
             border-color: #ff6b35;
-            background: rgba(255, 107, 53, 0.2);
-        }
-        
-        .mute-btn {
-            color: white;
+            background: rgba(255, 107, 53, 0.3);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
         }
         
         .mute-btn.muted {
             background: #ff4444;
             border-color: #ff4444;
-            color: white;
-        }
-        
-        .video-btn {
             color: white;
         }
         
@@ -125,20 +120,22 @@
         .end-call-btn:hover {
             background: #ff3333;
             border-color: #ff3333;
+            box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
         }
         
         .status-bar {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             padding: 15px 20px;
             border-radius: 25px;
             backdrop-filter: blur(20px);
             display: flex;
             align-items: center;
             gap: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         
         .status-indicator {
@@ -168,12 +165,13 @@
             position: absolute;
             top: 20px;
             right: 240px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             padding: 10px 15px;
             border-radius: 20px;
             backdrop-filter: blur(20px);
             font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         
         .welcome-screen {
@@ -319,12 +317,14 @@
             .control-btn {
                 width: 50px;
                 height: 50px;
-                font-size: 20px;
+                font-size: 14px;
+                font-weight: 700;
             }
             
             .end-call-btn {
                 width: 60px;
                 height: 60px;
+                font-size: 16px;
             }
             
             .status-bar {
@@ -364,13 +364,13 @@
         <!-- Панель управления -->
         <div class="controls-panel">
             <button class="control-btn mute-btn" id="muteBtn" title="Включить/выключить микрофон">
-                🎤
+                MIC
             </button>
             <button class="control-btn video-btn" id="videoBtn" title="Включить/выключить камеру">
-                📹
+                CAM
             </button>
             <button class="control-btn end-call-btn" id="endCallBtn" title="Завершить звонок">
-                📞
+                END
             </button>
         </div>
     </div>
@@ -560,7 +560,7 @@
                         audioTrack.enabled = !audioTrack.enabled;
                         this.isMuted = !audioTrack.enabled;
                         this.muteBtn.classList.toggle('muted', this.isMuted);
-                        this.muteBtn.textContent = this.isMuted ? '🔇' : '🎤';
+                        this.muteBtn.textContent = this.isMuted ? 'MUTED' : 'MIC';
                     }
                 }
             }
@@ -572,7 +572,7 @@
                         videoTrack.enabled = !videoTrack.enabled;
                         this.isVideoEnabled = videoTrack.enabled;
                         this.videoBtn.classList.toggle('disabled', !this.isVideoEnabled);
-                        this.videoBtn.textContent = this.isVideoEnabled ? '📹' : '📷';
+                        this.videoBtn.textContent = this.isVideoEnabled ? 'CAM' : 'OFF';
                     }
                 }
             }
