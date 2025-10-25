@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call With Parents - Видеозвонок</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .call-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .video-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+        
+        .remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+        
+        .local-video {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            border-radius: 15px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            object-fit: cover;
+            background: #000;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        
+        .local-video:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .controls-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 30px 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .mute-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .mute-btn.muted {
+            background: #ff4444;
+            color: white;
+        }
+        
+        .video-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .video-btn.disabled {
+            background: #ff4444;
+            color: white;
+        }
+        
+        .end-call-btn {
+            background: #ff4444;
+            color: white;
+            width: 70px;
+            height: 70px;
+        }
+        
+        .status-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.connecting {
+            background: #ff9800;
+        }
+        
+        .status-indicator.error {
+            background: #f44336;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .connection-info {
+            position: absolute;
+            top: 20px;
+            right: 240px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            font-size: 14px;
+        }
+        
+        .welcome-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .welcome-content {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .welcome-content h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-content p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .input-group {
+            margin: 20px 0;
+        }
+        
+        .input-group input {
+            padding: 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .notification.error {
+            border-left: 4px solid #f44336;
+        }
+        
+        .notification.info {
+            border-left: 4px solid #2196F3;
+        }
+        
+        @media (max-width: 768px) {
+            .local-video {
+                width: 120px;
+                height: 90px;
+                top: 10px;
+                right: 10px;
+            }
+            
+            .controls-panel {
+                padding: 20px 10px 10px;
+                gap: 15px;
+            }
+            
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            .end-call-btn {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .status-bar {
+                top: 10px;
+                left: 10px;
+                padding: 10px 15px;
+            }
+            
+            .connection-info {
+                top: 10px;
+                right: 140px;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="call-container">
+        <!-- Видео контейнер -->
+        <div class="video-container">
+            <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+            <video id="localVideo" class="local-video" autoplay muted playsinline></video>
+        </div>
+        
+        <!-- Статус бар -->
+        <div class="status-bar">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Подключение...</span>
+        </div>
+        
+        <!-- Информация о соединении -->
+        <div class="connection-info" id="connectionInfo" style="display: none;">
+            <span id="connectionText"></span>
+        </div>
+        
+        <!-- Панель управления -->
+        <div class="controls-panel">
+            <button class="control-btn mute-btn" id="muteBtn" title="Включить/выключить микрофон">
+                🎤
+            </button>
+            <button class="control-btn video-btn" id="videoBtn" title="Включить/выключить камеру">
+                📹
+            </button>
+            <button class="control-btn end-call-btn" id="endCallBtn" title="Завершить звонок">
+                📞
+            </button>
+        </div>
+    </div>
+    
+    <!-- Экран приветствия -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+            <h1>📞 Call With Parents</h1>
+            <p>Бесплатные видеозвонки 1 на 1</p>
+            
+            <div class="input-group">
+                <input type="text" id="peerIdInput" placeholder="Введите ID участника для подключения">
+            </div>
+            
+            <div>
+                <button class="btn" id="startCallBtn">📹 Начать звонок</button>
+                <button class="btn btn-secondary" id="createRoomBtn">🏠 Создать комнату</button>
+            </div>
+            
+            <div id="myIdDisplay" style="display: none; margin-top: 20px;">
+                <p><strong>Ваш ID:</strong></p>
+                <p id="myId" style="font-family: monospace; font-size: 18px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px;"></p>
+                <p style="font-size: 14px; opacity: 0.8;">Поделитесь этим ID с другим участником</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Уведомления -->
+    <div class="notification" id="notification"></div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        class VideoCallApp {
+            constructor() {
+                this.localStream = null;
+                this.peer = null;
+                this.connection = null;
+                this.isMuted = false;
+                this.isVideoEnabled = true;
+                this.isConnected = false;
+                
+                // Элементы интерфейса
+                this.welcomeScreen = document.getElementById('welcomeScreen');
+                this.localVideo = document.getElementById('localVideo');
+                this.remoteVideo = document.getElementById('remoteVideo');
+                this.statusIndicator = document.getElementById('statusIndicator');
+                this.statusText = document.getElementById('statusText');
+                this.connectionInfo = document.getElementById('connectionInfo');
+                this.connectionText = document.getElementById('connectionText');
+                this.muteBtn = document.getElementById('muteBtn');
+                this.videoBtn = document.getElementById('videoBtn');
+                this.endCallBtn = document.getElementById('endCallBtn');
+                this.peerIdInput = document.getElementById('peerIdInput');
+                this.myIdDisplay = document.getElementById('myIdDisplay');
+                this.myId = document.getElementById('myId');
+                this.notification = document.getElementById('notification');
+                
+                // Кнопки
+                this.startCallBtn = document.getElementById('startCallBtn');
+                this.createRoomBtn = document.getElementById('createRoomBtn');
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                this.startCallBtn.onclick = () => this.startCall();
+                this.createRoomBtn.onclick = () => this.createRoom();
+                this.muteBtn.onclick = () => this.toggleMute();
+                this.videoBtn.onclick = () => this.toggleVideo();
+                this.endCallBtn.onclick = () => this.endCall();
+                
+                // Enter для подключения
+                this.peerIdInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.startCall();
+                    }
+                });
+            }
+            
+            async createRoom() {
+                try {
+                    this.updateStatus('connecting', 'Создание комнаты...');
+                    
+                    // Получаем доступ к камере
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true
+                    });
+                    
+                    this.localVideo.srcObject = this.localStream;
+                    
+                    // Создаем PeerJS соединение
+                    this.peer = new Peer();
+                    
+                    this.peer.on('open', (id) => {
+                        this.myId.textContent = id;
+                        this.myIdDisplay.style.display = 'block';
+                        this.updateStatus('connected', 'Комната создана!');
+                        this.showNotification('Комната создана! Поделитесь ID с другим участником', 'success');
+                    });
+                    
+                    this.peer.on('call', (call) => {
+                        this.updateStatus('connecting', 'Входящий звонок...');
+                        call.answer(this.localStream);
+                        this.connection = call;
+                        this.setupConnectionHandlers();
+                    });
+                    
+                    this.peer.on('error', (error) => {
+                        console.error('PeerJS ошибка:', error);
+                        this.updateStatus('error', 'Ошибка соединения');
+                        this.showNotification('Ошибка: ' + error.message, 'error');
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка создания комнаты:', error);
+                    this.updateStatus('error', 'Ошибка доступа к камере');
+                    this.showNotification('Ошибка доступа к камере: ' + error.message, 'error');
+                }
+            }
+            
+            async startCall() {
+                const peerId = this.peerIdInput.value.trim();
+                if (!peerId) {
+                    this.showNotification('Введите ID участника!', 'error');
+                    return;
+                }
+                
+                try {
+                    this.updateStatus('connecting', 'Подключение к участнику...');
+                    
+                    // Получаем доступ к камере
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true
+                    });
+                    
+                    this.localVideo.srcObject = this.localStream;
+                    
+                    // Создаем PeerJS соединение
+                    this.peer = new Peer();
+                    
+                    this.peer.on('open', (id) => {
+                        this.updateStatus('connecting', 'Подключение...');
+                        this.connection = this.peer.call(peerId, this.localStream);
+                        this.setupConnectionHandlers();
+                    });
+                    
+                    this.peer.on('error', (error) => {
+                        console.error('PeerJS ошибка:', error);
+                        this.updateStatus('error', 'Ошибка соединения');
+                        this.showNotification('Ошибка: ' + error.message, 'error');
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка подключения:', error);
+                    this.updateStatus('error', 'Ошибка доступа к камере');
+                    this.showNotification('Ошибка доступа к камере: ' + error.message, 'error');
+                }
+            }
+            
+            setupConnectionHandlers() {
+                this.connection.on('stream', (remoteStream) => {
+                    this.remoteVideo.srcObject = remoteStream;
+                    this.isConnected = true;
+                    this.updateStatus('connected', 'Соединение установлено');
+                    this.showNotification('Соединение установлено!', 'success');
+                    this.hideWelcomeScreen();
+                });
+                
+                this.connection.on('close', () => {
+                    this.isConnected = false;
+                    this.updateStatus('error', 'Соединение потеряно');
+                    this.showNotification('Соединение потеряно', 'error');
+                });
+                
+                this.connection.on('error', (error) => {
+                    console.error('Ошибка соединения:', error);
+                    this.updateStatus('error', 'Ошибка соединения');
+                    this.showNotification('Ошибка соединения: ' + error.message, 'error');
+                });
+            }
+            
+            toggleMute() {
+                if (this.localStream) {
+                    const audioTrack = this.localStream.getAudioTracks()[0];
+                    if (audioTrack) {
+                        audioTrack.enabled = !audioTrack.enabled;
+                        this.isMuted = !audioTrack.enabled;
+                        this.muteBtn.classList.toggle('muted', this.isMuted);
+                        this.muteBtn.textContent = this.isMuted ? '🔇' : '🎤';
+                    }
+                }
+            }
+            
+            toggleVideo() {
+                if (this.localStream) {
+                    const videoTrack = this.localStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        videoTrack.enabled = !videoTrack.enabled;
+                        this.isVideoEnabled = videoTrack.enabled;
+                        this.videoBtn.classList.toggle('disabled', !this.isVideoEnabled);
+                        this.videoBtn.textContent = this.isVideoEnabled ? '📹' : '📷';
+                    }
+                }
+            }
+            
+            endCall() {
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                }
+                if (this.connection) {
+                    this.connection.close();
+                }
+                if (this.peer) {
+                    this.peer.destroy();
+                }
+                
+                this.localVideo.srcObject = null;
+                this.remoteVideo.srcObject = null;
+                this.isConnected = false;
+                
+                this.showWelcomeScreen();
+                this.updateStatus('disconnected', 'Звонок завершен');
+                this.showNotification('Звонок завершен', 'info');
+            }
+            
+            updateStatus(type, text) {
+                this.statusText.textContent = text;
+                this.statusIndicator.className = `status-indicator ${type}`;
+                
+                if (type === 'connected') {
+                    this.connectionInfo.style.display = 'block';
+                    this.connectionText.textContent = 'Соединение активно';
+                } else {
+                    this.connectionInfo.style.display = 'none';
+                }
+            }
+            
+            showWelcomeScreen() {
+                this.welcomeScreen.style.display = 'flex';
+            }
+            
+            hideWelcomeScreen() {
+                this.welcomeScreen.style.display = 'none';
+            }
+            
+            showNotification(message, type = 'info') {
+                this.notification.textContent = message;
+                this.notification.className = `notification ${type} show`;
+                
+                setTimeout(() => {
+                    this.notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+        
+        // Запускаем приложение
+        new VideoCallApp();
+    </script>
+</body>
+</html>
