@@ -203,6 +203,22 @@
               audio: true
             });
             this.localVideo.srcObject = this.localStream;
+            
+            // Проверяем, что локальное видео работает
+            this.localVideo.onloadedmetadata = () => {
+              console.log('Локальное видео загружено');
+              this.showNotification('Камера включена', 'success');
+            };
+            
+            this.localVideo.onerror = (error) => {
+              console.error('Ошибка локального видео:', error);
+              this.showNotification('Ошибка камеры', 'error');
+            };
+            
+            console.log('Локальный поток получен:', this.localStream);
+            console.log('Видео треки:', this.localStream.getVideoTracks());
+            console.log('Аудио треки:', this.localStream.getAudioTracks());
+            
           } catch (error) {
             console.error('Failed to get user media:', error);
             this.showNotification('Не удалось получить доступ к камере и микрофону', 'error');
@@ -246,12 +262,32 @@
           case 'room-joined':
             console.log('Присоединение к комнате:', data);
             this.callStatus.textContent = 'В комнате, ожидание участников...';
+            
+            // Если мы одни в комнате, ждем других участников
+            if (data.participants && data.participants.length === 1) {
+              console.log('Мы одни в комнате, ждем других участников');
+              this.callStatus.textContent = 'Ожидание других участников...';
+            } else if (data.participants && data.participants.length === 2) {
+              // Если в комнате уже 2 участника, значит мы присоединились к существующей комнате
+              console.log('Присоединились к комнате с участниками, создаем соединение');
+              this.createPeerConnection();
+            }
             break;
             
           case 'user-joined':
             console.log('Новый участник:', data.userId);
             this.callStatus.textContent = 'Участник присоединился, установка соединения...';
-            this.createPeerConnection();
+            
+            // Если это не мы, значит кто-то другой присоединился
+            if (data.userId !== this.userId) {
+              console.log('Кто-то другой присоединился, создаем соединение');
+              this.callStatus.textContent = 'Участник присоединился, создаем соединение...';
+              this.createPeerConnection();
+            } else {
+              // Если это мы присоединились, тоже создаем соединение
+              console.log('Мы присоединились, создаем соединение');
+              this.createPeerConnection();
+            }
             break;
             
           case 'user-left':
@@ -290,19 +326,182 @@
         
         // Обработка входящих потоков
         this.peerConnection.ontrack = (event) => {
-          console.log('Получен удаленный поток');
-          this.remoteVideo.srcObject = event.streams[0];
-          this.callStatus.textContent = 'Соединение установлено';
-          this.showNotification('Соединение установлено!', 'success');
+          console.log('Получен удаленный поток:', event);
+          console.log('Streams:', event.streams);
+          console.log('Track:', event.track);
+          
+          if (event.streams && event.streams[0]) {
+            console.log('Устанавливаем удаленный поток в видео элемент');
+            console.log('Удаленный поток содержит треки:', event.streams[0].getTracks());
+            console.log('Видео треки в удаленном потоке:', event.streams[0].getVideoTracks());
+            console.log('Аудио треки в удаленном потоке:', event.streams[0].getAudioTracks());
+            
+            // Проверяем и разглушаем видео треки
+            const videoTracks = event.streams[0].getVideoTracks();
+            if (videoTracks.length > 0) {
+              console.log('Проверяем состояние видео трека:', videoTracks[0].muted);
+              if (videoTracks[0].muted) {
+                console.log('Видео трек заглушен, пробуем разглушить');
+                videoTracks[0].enabled = true;
+                
+                // Пробуем создать новый поток из трека
+                console.log('Создаем новый поток из заглушенного трека');
+                const newStream = new MediaStream([videoTracks[0]]);
+                this.remoteVideo.srcObject = newStream;
+              }
+            }
+            
+            this.remoteVideo.srcObject = event.streams[0];
+            
+            // Проверяем, что видео загрузилось
+            this.remoteVideo.onloadedmetadata = () => {
+              console.log('Удаленное видео загружено');
+              this.callStatus.textContent = 'Соединение установлено';
+              this.showNotification('Соединение установлено!', 'success');
+            };
+            
+            this.remoteVideo.onerror = (error) => {
+              console.error('Ошибка удаленного видео:', error);
+              this.showNotification('Ошибка удаленного видео', 'error');
+            };
+            
+            // Ждем загрузки метаданных перед воспроизведением
+            this.remoteVideo.onloadedmetadata = () => {
+              console.log('Метаданные удаленного видео загружены');
+              this.remoteVideo.play().catch(error => {
+                console.error('Ошибка воспроизведения удаленного видео:', error);
+              });
+            };
+            
+            // Дополнительная проверка через небольшую задержку
+            setTimeout(() => {
+              console.log('Проверка удаленного видео через 2 секунды:');
+              console.log('- srcObject:', this.remoteVideo.srcObject);
+              console.log('- readyState:', this.remoteVideo.readyState);
+              console.log('- videoWidth:', this.remoteVideo.videoWidth);
+              console.log('- videoHeight:', this.remoteVideo.videoHeight);
+              console.log('- paused:', this.remoteVideo.paused);
+              console.log('- currentTime:', this.remoteVideo.currentTime);
+              
+              if (this.remoteVideo.videoWidth === 0 && this.remoteVideo.videoHeight === 0) {
+                console.log('Удаленное видео не отображается, пробуем другой подход');
+                
+                // Создаем новый видео элемент с правильными атрибутами
+                const newVideo = document.createElement('video');
+                newVideo.setAttribute('autoplay', 'true');
+                newVideo.setAttribute('playsinline', 'true');
+                newVideo.setAttribute('muted', 'false');
+                newVideo.style.width = '100%';
+                newVideo.style.height = '100%';
+                newVideo.style.objectFit = 'cover';
+                
+                // Устанавливаем поток
+                newVideo.srcObject = event.streams[0];
+                
+                // Добавляем обработчики
+                newVideo.onloadedmetadata = () => {
+                  console.log('Новый видео элемент: метаданные загружены');
+                  newVideo.play().catch(e => console.error('Ошибка воспроизведения нового видео:', e));
+                };
+                
+                newVideo.oncanplay = () => {
+                  console.log('Новый видео элемент: готов к воспроизведению');
+                };
+                
+                // Заменяем старый элемент
+                this.remoteVideo.parentNode.replaceChild(newVideo, this.remoteVideo);
+                this.remoteVideo = newVideo;
+                
+                console.log('Создан новый видео элемент для удаленного потока');
+                
+                // Принудительно запускаем воспроизведение через небольшую задержку
+                setTimeout(() => {
+                  if (newVideo.paused) {
+                    console.log('Принудительно запускаем воспроизведение нового видео');
+                    newVideo.play().catch(e => console.error('Ошибка принудительного воспроизведения:', e));
+                  }
+                }, 500);
+                
+                // Финальная проверка через 5 секунд
+                setTimeout(() => {
+                  console.log('Финальная проверка видео:');
+                  console.log('- videoWidth:', newVideo.videoWidth);
+                  console.log('- videoHeight:', newVideo.videoHeight);
+                  console.log('- readyState:', newVideo.readyState);
+                  console.log('- paused:', newVideo.paused);
+                  
+                  if (newVideo.videoWidth > 0 && newVideo.videoHeight > 0) {
+                    console.log('✅ Видео успешно отображается!');
+                  } else {
+                    console.log('❌ Видео все еще не отображается');
+                    console.log('Пробуем последний способ - прямой доступ к трекам');
+                    
+                    // Пробуем получить треки напрямую
+                    const videoTracks = event.streams[0].getVideoTracks();
+                    console.log('Видео треки:', videoTracks);
+                    if (videoTracks.length > 0) {
+                      console.log('Первый видео трек:', videoTracks[0]);
+                      console.log('Трек активен:', videoTracks[0].enabled);
+                      console.log('Трек готов:', videoTracks[0].readyState);
+                      console.log('Трек заглушен:', videoTracks[0].muted);
+                      
+                      // Пробуем разглушить трек
+                      if (videoTracks[0].muted) {
+                        console.log('Пробуем разглушить видео трек');
+                        videoTracks[0].enabled = true;
+                        
+                        // Пробуем создать новый поток из трека
+                        console.log('Создаем новый поток из трека');
+                        const newStream = new MediaStream([videoTracks[0]]);
+                        newVideo.srcObject = newStream;
+                        
+                        // Пробуем принудительно запустить воспроизведение
+                        newVideo.play().catch(e => console.error('Ошибка воспроизведения после разглушения:', e));
+                      }
+                    }
+                  }
+                }, 5000);
+              }
+            }, 2000);
+            
+          } else {
+            console.error('Нет потоков в событии track');
+            this.showNotification('Ошибка: нет видео потока', 'error');
+          }
         };
         
         // Обработка ICE кандидатов
         this.peerConnection.onicecandidate = (event) => {
           if (event.candidate) {
+            console.log('Отправляем ICE candidate:', event.candidate);
             this.sendSignalingMessage({
               type: 'ice-candidate',
               candidate: event.candidate
             });
+          }
+        };
+        
+        // Отслеживание состояния соединения
+        this.peerConnection.onconnectionstatechange = () => {
+          console.log('Состояние соединения:', this.peerConnection.connectionState);
+          this.callStatus.textContent = `Соединение: ${this.peerConnection.connectionState}`;
+          
+          if (this.peerConnection.connectionState === 'connected') {
+            console.log('WebRTC соединение установлено!');
+            this.showNotification('WebRTC соединение установлено!', 'success');
+          }
+        };
+        
+        this.peerConnection.oniceconnectionstatechange = () => {
+          console.log('ICE состояние:', this.peerConnection.iceConnectionState);
+          
+          if (this.peerConnection.iceConnectionState === 'connected') {
+            console.log('ICE соединение установлено!');
+            // Проверяем состояние видео элементов
+            console.log('Локальное видео srcObject:', this.localVideo.srcObject);
+            console.log('Удаленное видео srcObject:', this.remoteVideo.srcObject);
+            console.log('Удаленное видео readyState:', this.remoteVideo.readyState);
+            console.log('Удаленное видео paused:', this.remoteVideo.paused);
           }
         };
         
@@ -317,27 +516,105 @@
       }
 
       async handleOffer(data) {
+        console.log('Получен offer от:', data.from);
+        
         if (!this.peerConnection) {
           await this.createPeerConnection();
         }
         
-        await this.peerConnection.setRemoteDescription(data.offer);
-        const answer = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answer);
+        // Простая логика - всегда обрабатываем offer
+        console.log('Обрабатываем offer, состояние:', this.peerConnection.signalingState);
         
-        this.sendSignalingMessage({
-          type: 'answer',
-          answer: answer
-        });
+        try {
+          await this.peerConnection.setRemoteDescription(data.offer);
+          
+          // Добавляем отложенные ICE кандидаты
+          if (this.pendingIceCandidates && this.pendingIceCandidates.length > 0) {
+            console.log('Добавляем отложенные ICE кандидаты:', this.pendingIceCandidates.length);
+            for (const candidate of this.pendingIceCandidates) {
+              try {
+                await this.peerConnection.addIceCandidate(candidate);
+              } catch (error) {
+                console.error('Ошибка добавления отложенного ICE candidate:', error);
+              }
+            }
+            this.pendingIceCandidates = [];
+          }
+          
+          console.log('Создаем answer');
+          const answer = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answer);
+          
+          console.log('Отправляем answer');
+          this.sendSignalingMessage({
+            type: 'answer',
+            answer: answer
+          });
+          
+        } catch (error) {
+          console.error('Ошибка обработки offer:', error);
+          // Если ошибка, создаем новое соединение
+          this.peerConnection.close();
+          this.peerConnection = null;
+          await this.createPeerConnection();
+          await this.peerConnection.setRemoteDescription(data.offer);
+          
+          const answer = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answer);
+          
+          this.sendSignalingMessage({
+            type: 'answer',
+            answer: answer
+          });
+        }
       }
 
       async handleAnswer(data) {
-        await this.peerConnection.setRemoteDescription(data.answer);
+        console.log('Получен answer от:', data.from);
+        
+        if (this.peerConnection && this.peerConnection.signalingState === 'have-local-offer') {
+          console.log('Устанавливаем remote description для answer');
+          await this.peerConnection.setRemoteDescription(data.answer);
+          
+          // Добавляем отложенные ICE кандидаты
+          if (this.pendingIceCandidates && this.pendingIceCandidates.length > 0) {
+            console.log('Добавляем отложенные ICE кандидаты после answer:', this.pendingIceCandidates.length);
+            for (const candidate of this.pendingIceCandidates) {
+              try {
+                await this.peerConnection.addIceCandidate(candidate);
+              } catch (error) {
+                console.error('Ошибка добавления отложенного ICE candidate:', error);
+              }
+            }
+            this.pendingIceCandidates = [];
+          }
+        } else if (!this.peerConnection) {
+          console.log('Получили answer, но у нас нет соединения, создаем новое');
+          await this.createPeerConnection();
+          await this.peerConnection.setRemoteDescription(data.answer);
+        } else {
+          console.log('Пропускаем answer, неподходящее состояние:', this.peerConnection?.signalingState);
+        }
       }
 
       async handleIceCandidate(data) {
         if (this.peerConnection) {
-          await this.peerConnection.addIceCandidate(data.candidate);
+          // Проверяем, что remote description установлен
+          if (this.peerConnection.remoteDescription) {
+            try {
+              await this.peerConnection.addIceCandidate(data.candidate);
+              console.log('ICE candidate добавлен успешно');
+            } catch (error) {
+              console.error('Ошибка добавления ICE candidate:', error);
+            }
+          } else {
+            console.log('Откладываем ICE candidate, remote description не установлен');
+            // Сохраняем кандидата для добавления позже
+            if (!this.pendingIceCandidates) {
+              this.pendingIceCandidates = [];
+            }
+            this.pendingIceCandidates.push(data.candidate);
+          }
         }
       }
 

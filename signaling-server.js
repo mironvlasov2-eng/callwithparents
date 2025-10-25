@@ -69,6 +69,11 @@ wss.on('connection', (ws, req) => {
         case 'ping':
           ws.send(JSON.stringify({ type: 'pong' }));
           break;
+          
+        case 'pong':
+          // Обновляем время последней активности
+          ws.lastPong = Date.now();
+          break;
       }
     } catch (error) {
       console.error('Ошибка обработки сообщения:', error);
@@ -86,11 +91,15 @@ wss.on('connection', (ws, req) => {
       // Уведомляем других участников
       rooms.get(roomId).forEach(participantId => {
         if (connections.has(participantId)) {
-          connections.get(participantId).send(JSON.stringify({
-            type: 'user-left',
-            userId: userId,
-            room: roomId
-          }));
+          try {
+            connections.get(participantId).send(JSON.stringify({
+              type: 'user-left',
+              userId: userId,
+              room: roomId
+            }));
+          } catch (error) {
+            console.error('Ошибка отправки уведомления:', error);
+          }
         }
       });
       
@@ -108,6 +117,27 @@ wss.on('connection', (ws, req) => {
     console.error(`Ошибка WebSocket для ${userId}:`, error);
   });
 });
+
+// Периодическая проверка соединений
+setInterval(() => {
+  const now = Date.now();
+  const timeout = 30000; // 30 секунд
+  
+  connections.forEach((ws, userId) => {
+    if (ws.lastPong && (now - ws.lastPong) > timeout) {
+      console.log(`Таймаут соединения для ${userId}`);
+      ws.close();
+    } else if (!ws.lastPong) {
+      // Отправляем ping
+      try {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      } catch (error) {
+        console.error(`Ошибка отправки ping для ${userId}:`, error);
+        ws.close();
+      }
+    }
+  });
+}, 10000); // Проверяем каждые 10 секунд
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

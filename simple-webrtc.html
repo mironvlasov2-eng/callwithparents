@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Простой WebRTC тест</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background: #000;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .video-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Простой WebRTC тест</h1>
+        <p>Тестируем WebRTC соединение без сложной логики</p>
+        
+        <div class="controls">
+            <button id="startBtn">📹 Начать тест</button>
+            <button id="stopBtn" disabled>⏹️ Остановить</button>
+        </div>
+        
+        <div class="status" id="status">Готов к тестированию</div>
+        
+        <div class="video-container">
+            <div>
+                <h3>Локальное видео</h3>
+                <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+            <div>
+                <h3>Удаленное видео</h3>
+                <video id="remoteVideo" autoplay playsinline></video>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SimpleWebRTCTest {
+            constructor() {
+                this.localStream = null;
+                this.peerConnection = null;
+                this.signalingSocket = null;
+                this.roomId = null;
+                this.userId = null;
+                
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.status = document.getElementById('status');
+                this.localVideo = document.getElementById('localVideo');
+                this.remoteVideo = document.getElementById('remoteVideo');
+                
+                this.startBtn.onclick = () => this.startTest();
+                this.stopBtn.onclick = () => this.stopTest();
+            }
+            
+            async startTest() {
+                try {
+                    this.status.textContent = 'Запрашиваем доступ к камере...';
+                    
+                    // Получаем доступ к камере
+                    this.localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true
+                    });
+                    
+                    this.localVideo.srcObject = this.localStream;
+                    this.status.textContent = 'Камера включена, подключаемся к серверу...';
+                    
+                    // Подключаемся к сигнальному серверу
+                    this.roomId = 'simple-test';
+                    this.userId = 'user-' + Math.random().toString(36).substr(2, 9);
+                    
+                    this.signalingSocket = new WebSocket(`ws://localhost:3000?room=${this.roomId}&user=${this.userId}`);
+                    
+                    this.signalingSocket.onopen = () => {
+                        this.status.textContent = 'Подключение к серверу установлено';
+                    };
+                    
+                    this.signalingSocket.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleSignalingMessage(data);
+                    };
+                    
+                    this.signalingSocket.onclose = () => {
+                        this.status.textContent = 'Соединение с сервером потеряно';
+                    };
+                    
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    this.status.textContent = 'Ошибка: ' + error.message;
+                }
+            }
+            
+            handleSignalingMessage(data) {
+                console.log('Получено сообщение:', data);
+                
+                switch (data.type) {
+                    case 'room-joined':
+                        this.status.textContent = 'В комнате, ожидание участников...';
+                        break;
+                        
+                    case 'user-joined':
+                        this.status.textContent = 'Участник присоединился, создаем соединение...';
+                        this.createPeerConnection();
+                        break;
+                        
+                    case 'offer':
+                        this.handleOffer(data);
+                        break;
+                        
+                    case 'answer':
+                        this.handleAnswer(data);
+                        break;
+                        
+                    case 'ice-candidate':
+                        this.handleIceCandidate(data);
+                        break;
+                }
+            }
+            
+            async createPeerConnection() {
+                try {
+                    this.peerConnection = new RTCPeerConnection({
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' }
+                        ]
+                    });
+                    
+                    // Добавляем локальный поток
+                    this.localStream.getTracks().forEach(track => {
+                        this.peerConnection.addTrack(track, this.localStream);
+                    });
+                    
+                    // Обработка входящих потоков
+                    this.peerConnection.ontrack = (event) => {
+                        console.log('Получен удаленный поток:', event);
+                        if (event.streams && event.streams[0]) {
+                            this.remoteVideo.srcObject = event.streams[0];
+                            this.status.textContent = 'WebRTC соединение установлено!';
+                            
+                            // Простая проверка через 3 секунды
+                            setTimeout(() => {
+                                console.log('Проверка видео:');
+                                console.log('- videoWidth:', this.remoteVideo.videoWidth);
+                                console.log('- videoHeight:', this.remoteVideo.videoHeight);
+                                console.log('- readyState:', this.remoteVideo.readyState);
+                                console.log('- paused:', this.remoteVideo.paused);
+                                
+                                if (this.remoteVideo.videoWidth > 0 && this.remoteVideo.videoHeight > 0) {
+                                    console.log('✅ Видео отображается!');
+                                    this.status.textContent = '✅ Видео работает!';
+                                } else {
+                                    console.log('❌ Видео не отображается');
+                                    this.status.textContent = '❌ Видео не отображается';
+                                }
+                            }, 3000);
+                        }
+                    };
+                    
+                    // Обработка ICE кандидатов
+                    this.peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            this.sendSignalingMessage({
+                                type: 'ice-candidate',
+                                candidate: event.candidate
+                            });
+                        }
+                    };
+                    
+                    // Создаем offer
+                    const offer = await this.peerConnection.createOffer();
+                    await this.peerConnection.setLocalDescription(offer);
+                    
+                    this.sendSignalingMessage({
+                        type: 'offer',
+                        offer: offer
+                    });
+                    
+                } catch (error) {
+                    console.error('Ошибка создания соединения:', error);
+                    this.status.textContent = 'Ошибка создания соединения: ' + error.message;
+                }
+            }
+            
+            async handleOffer(data) {
+                if (!this.peerConnection) {
+                    await this.createPeerConnection();
+                }
+                
+                await this.peerConnection.setRemoteDescription(data.offer);
+                const answer = await this.peerConnection.createAnswer();
+                await this.peerConnection.setLocalDescription(answer);
+                
+                this.sendSignalingMessage({
+                    type: 'answer',
+                    answer: answer
+                });
+            }
+            
+            async handleAnswer(data) {
+                await this.peerConnection.setRemoteDescription(data.answer);
+            }
+            
+            async handleIceCandidate(data) {
+                if (this.peerConnection) {
+                    await this.peerConnection.addIceCandidate(data.candidate);
+                }
+            }
+            
+            sendSignalingMessage(message) {
+                if (this.signalingSocket && this.signalingSocket.readyState === WebSocket.OPEN) {
+                    this.signalingSocket.send(JSON.stringify(message));
+                }
+            }
+            
+            stopTest() {
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                }
+                if (this.peerConnection) {
+                    this.peerConnection.close();
+                }
+                if (this.signalingSocket) {
+                    this.signalingSocket.close();
+                }
+                
+                this.localVideo.srcObject = null;
+                this.remoteVideo.srcObject = null;
+                
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.status.textContent = 'Тест остановлен';
+            }
+        }
+        
+        // Запускаем приложение
+        new SimpleWebRTCTest();
+    </script>
+</body>
+</html>

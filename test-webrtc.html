@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call With Parents - Тест WebRTC</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>👩‍👦 Call With Parents</h1>
+      <p>Тест WebRTC соединения</p>
+    </header>
+
+    <div class="main-content">
+      <div class="welcome-card">
+        <h2>Тестирование WebRTC</h2>
+        <p>Эта версия создает виртуальные видео потоки для тестирования</p>
+        
+        <div class="video-container">
+          <div class="video-wrapper">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="video-label">Локальное видео</div>
+          </div>
+          
+          <div class="video-wrapper">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div class="video-label">Удаленное видео</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="startTestBtn" class="btn btn-primary">🧪 Начать тест</button>
+          <button id="stopTestBtn" class="btn btn-secondary" disabled>⏹ Остановить</button>
+        </div>
+
+        <div class="test-info">
+          <p id="testStatus">Готов к тестированию</p>
+          <p><small>Этот тест создает виртуальные потоки для проверки WebRTC</small></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="notifications" class="notifications"></div>
+  </div>
+
+  <script>
+    class WebRTCTestApp {
+      constructor() {
+        this.localStream = null;
+        this.remoteStream = null;
+        this.peerConnection = null;
+        this.signalingSocket = null;
+        this.roomId = null;
+        this.userId = null;
+        
+        this.initializeElements();
+        this.bindEvents();
+      }
+
+      initializeElements() {
+        this.localVideo = document.getElementById('localVideo');
+        this.remoteVideo = document.getElementById('remoteVideo');
+        this.startTestBtn = document.getElementById('startTestBtn');
+        this.stopTestBtn = document.getElementById('stopTestBtn');
+        this.testStatus = document.getElementById('testStatus');
+        this.notifications = document.getElementById('notifications');
+      }
+
+      bindEvents() {
+        this.startTestBtn.addEventListener('click', () => this.startTest());
+        this.stopTestBtn.addEventListener('click', () => this.stopTest());
+      }
+
+      async startTest() {
+        try {
+          this.testStatus.textContent = 'Создание виртуальных потоков...';
+          
+          // Создаем виртуальные потоки
+          await this.createVirtualStreams();
+          
+          // Подключаемся к сигнальному серверу
+          this.roomId = 'test-room'; // Используем одну комнату для всех
+          this.userId = 'user-' + Math.random().toString(36).substr(2, 9);
+          
+          this.connectToSignalingServer();
+          
+          this.startTestBtn.disabled = true;
+          this.stopTestBtn.disabled = false;
+          
+          this.showNotification('Тест запущен', 'success');
+          
+        } catch (error) {
+          console.error('Ошибка запуска теста:', error);
+          this.showNotification('Ошибка запуска теста', 'error');
+        }
+      }
+
+      async createVirtualStreams() {
+        // Создаем canvas для генерации видео
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext('2d');
+        
+        // Анимация для локального видео
+        let frame = 0;
+        const drawLocal = () => {
+          ctx.fillStyle = `hsl(${(frame * 2) % 360}, 70%, 50%)`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          ctx.fillStyle = 'white';
+          ctx.font = '24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Локальное видео', canvas.width/2, canvas.height/2);
+          ctx.fillText(`Frame: ${frame}`, canvas.width/2, canvas.height/2 + 30);
+          
+          frame++;
+          requestAnimationFrame(drawLocal);
+        };
+        
+        // Анимация для удаленного видео
+        let remoteFrame = 0;
+        const drawRemote = () => {
+          ctx.fillStyle = `hsl(${(remoteFrame * 3 + 180) % 360}, 70%, 50%)`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          ctx.fillStyle = 'white';
+          ctx.font = '24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Удаленное видео', canvas.width/2, canvas.height/2);
+          ctx.fillText(`Frame: ${remoteFrame}`, canvas.width/2, canvas.height/2 + 30);
+          
+          remoteFrame++;
+          requestAnimationFrame(drawRemote);
+        };
+        
+        // Создаем MediaStream из canvas
+        const localStream = canvas.captureStream(30); // 30 FPS
+        const remoteStream = canvas.captureStream(30);
+        
+        // Запускаем анимации
+        drawLocal();
+        drawRemote();
+        
+        // Назначаем потоки
+        this.localStream = localStream;
+        this.remoteStream = remoteStream;
+        
+        this.localVideo.srcObject = this.localStream;
+        this.remoteVideo.srcObject = this.remoteStream;
+        
+        this.testStatus.textContent = 'Виртуальные потоки созданы';
+        console.log('Локальный поток:', this.localStream);
+        console.log('Удаленный поток:', this.remoteStream);
+      }
+
+      connectToSignalingServer() {
+        try {
+          this.signalingSocket = new WebSocket(`ws://localhost:3000?room=${this.roomId}&user=${this.userId}`);
+          
+          this.signalingSocket.onopen = () => {
+            console.log('Подключение к сигнальному серверу установлено');
+            this.testStatus.textContent = 'Подключение к серверу установлено';
+            this.showNotification('Подключение к серверу установлено', 'success');
+          };
+          
+          this.signalingSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            this.handleSignalingMessage(data);
+          };
+          
+          this.signalingSocket.onclose = (event) => {
+            console.log('Соединение с сигнальным сервером закрыто', event.code, event.reason);
+            this.testStatus.textContent = 'Соединение с сервером потеряно';
+          };
+          
+          this.signalingSocket.onerror = (error) => {
+            console.error('Ошибка сигнального сервера:', error);
+            this.testStatus.textContent = 'Ошибка подключения к серверу';
+          };
+          
+        } catch (error) {
+          console.error('Failed to connect to signaling server:', error);
+          this.showNotification('Не удалось подключиться к сигнальному серверу', 'error');
+        }
+      }
+
+      handleSignalingMessage(data) {
+        console.log('Получено сообщение:', data);
+        
+        switch (data.type) {
+          case 'room-joined':
+            console.log('Присоединились к комнате:', data);
+            if (data.participants && data.participants.length > 1) {
+              console.log('В комнате уже есть участники, определяем роль');
+              // Проверяем, есть ли участники с меньшим ID
+              const otherParticipants = data.participants.filter(p => p !== this.userId);
+              if (otherParticipants.length > 0) {
+                const shouldCreateOffer = otherParticipants.every(p => this.userId < p);
+                if (shouldCreateOffer) {
+                  console.log('Мы создаем offer (наш ID меньше всех)');
+                  this.testStatus.textContent = 'Создаем соединение...';
+                  this.createPeerConnection();
+                } else {
+                  console.log('Ждем offer от другого участника');
+                  this.testStatus.textContent = 'Ждем соединение от участника...';
+                }
+              }
+            } else {
+              this.testStatus.textContent = 'В комнате, ожидание участников...';
+            }
+            break;
+            
+          case 'user-joined':
+            console.log('Новый участник:', data.userId);
+            if (data.userId !== this.userId) {
+              // Кто-то присоединился, определяем кто создает offer
+              if (this.userId < data.userId) {
+                console.log('Мы создаем offer (наш ID меньше)');
+                this.testStatus.textContent = 'Создаем соединение...';
+                this.createPeerConnection();
+              } else {
+                console.log('Ждем offer от другого участника');
+                this.testStatus.textContent = 'Ждем соединение от участника...';
+                
+                // Таймаут ожидания offer
+                this.offerTimeout = setTimeout(() => {
+                  if (!this.peerConnection || this.peerConnection.signalingState === 'stable') {
+                    console.log('Таймаут ожидания offer, создаем соединение сами');
+                    this.testStatus.textContent = 'Создаем соединение (таймаут)...';
+                    this.createPeerConnection();
+                  }
+                }, 3000);
+              }
+            }
+            break;
+            
+          case 'user-left':
+            this.testStatus.textContent = 'Участник покинул комнату';
+            break;
+            
+          case 'offer':
+            this.handleOffer(data);
+            break;
+            
+          case 'answer':
+            this.handleAnswer(data);
+            break;
+            
+          case 'ice-candidate':
+            this.handleIceCandidate(data);
+            break;
+            
+          case 'ping':
+            // Отвечаем на ping
+            this.sendSignalingMessage({ type: 'pong' });
+            break;
+        }
+      }
+
+      async createPeerConnection() {
+        const configuration = {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        };
+        
+        this.peerConnection = new RTCPeerConnection(configuration);
+        
+        // Добавляем локальный поток
+        this.localStream.getTracks().forEach(track => {
+          this.peerConnection.addTrack(track, this.localStream);
+        });
+        
+        // Обработка входящих потоков
+        this.peerConnection.ontrack = (event) => {
+          console.log('Получен удаленный поток:', event);
+          if (event.streams && event.streams[0]) {
+            this.remoteVideo.srcObject = event.streams[0];
+            console.log('Удаленное видео установлено в элемент');
+            
+            // Добавляем обработчик для автоматического воспроизведения
+            this.remoteVideo.onloadedmetadata = () => {
+              console.log('Метаданные видео загружены, запускаем воспроизведение');
+              this.remoteVideo.play().catch(error => {
+                console.error('Ошибка автовоспроизведения:', error);
+              });
+            };
+            
+            // Проверяем размеры видео через 2 секунды
+            setTimeout(() => {
+              console.log('Проверка удаленного видео:');
+              console.log('- srcObject:', this.remoteVideo.srcObject);
+              console.log('- readyState:', this.remoteVideo.readyState);
+              console.log('- videoWidth:', this.remoteVideo.videoWidth);
+              console.log('- videoHeight:', this.remoteVideo.videoHeight);
+              console.log('- paused:', this.remoteVideo.paused);
+              console.log('- currentTime:', this.remoteVideo.currentTime);
+              
+              if (this.remoteVideo.videoWidth === 0 && this.remoteVideo.videoHeight === 0) {
+                console.log('Удаленное видео не отображается, пробуем другой подход');
+                
+                // Пробуем принудительно запустить воспроизведение
+                this.remoteVideo.play().catch(error => {
+                  console.error('Ошибка воспроизведения:', error);
+                });
+                
+                // Пробуем создать новый видео элемент
+                console.log('Создаем новый видео элемент для удаленного потока');
+                const newVideo = document.createElement('video');
+                newVideo.autoplay = true;
+                newVideo.playsInline = true;
+                newVideo.muted = true;
+                newVideo.srcObject = this.remoteVideo.srcObject;
+                newVideo.style.width = '100%';
+                newVideo.style.height = '100%';
+                newVideo.style.objectFit = 'cover';
+                
+                // Добавляем обработчик для автоматического воспроизведения нового элемента
+                newVideo.onloadedmetadata = () => {
+                  console.log('Метаданные нового видео загружены, запускаем воспроизведение');
+                  newVideo.play().catch(error => {
+                    console.error('Ошибка воспроизведения нового элемента:', error);
+                  });
+                };
+                
+                // Проверяем через 3 секунды, что видео отображается
+                setTimeout(() => {
+                  console.log('Проверка нового видео:');
+                  console.log('- videoWidth:', newVideo.videoWidth);
+                  console.log('- videoHeight:', newVideo.videoHeight);
+                  console.log('- readyState:', newVideo.readyState);
+                  console.log('- paused:', newVideo.paused);
+                  
+                  if (newVideo.videoWidth > 0 && newVideo.videoHeight > 0) {
+                    console.log('✅ Новое видео успешно отображается!');
+                  } else {
+                    console.log('❌ Новое видео все еще не отображается');
+                  }
+                }, 3000);
+                
+                // Заменяем старый элемент новым
+                this.remoteVideo.parentNode.replaceChild(newVideo, this.remoteVideo);
+                this.remoteVideo = newVideo;
+              }
+            }, 2000);
+            
+            this.testStatus.textContent = 'WebRTC соединение установлено!';
+            this.showNotification('WebRTC соединение установлено!', 'success');
+          }
+        };
+        
+        // Обработка ICE кандидатов
+        this.peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            this.sendSignalingMessage({
+              type: 'ice-candidate',
+              candidate: event.candidate
+            });
+          }
+        };
+        
+        // Отслеживание состояния соединения
+        this.peerConnection.onconnectionstatechange = () => {
+          console.log('Состояние соединения:', this.peerConnection.connectionState);
+          this.testStatus.textContent = `WebRTC: ${this.peerConnection.connectionState}`;
+          if (this.peerConnection.connectionState === 'connected') {
+            console.log('WebRTC соединение установлено!');
+          }
+        };
+        
+        // Создаем offer
+        const offer = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(offer);
+        
+        this.sendSignalingMessage({
+          type: 'offer',
+          offer: offer
+        });
+      }
+
+      async handleOffer(data) {
+        console.log('Получен offer от:', data.from);
+        
+        // Отменяем таймаут ожидания offer
+        if (this.offerTimeout) {
+          clearTimeout(this.offerTimeout);
+          this.offerTimeout = null;
+        }
+        
+        // Проверяем, не обрабатывали ли мы уже этот offer
+        if (this.processedOffers && this.processedOffers.has(data.from)) {
+          console.log('Offer уже обработан, пропускаем');
+          return;
+        }
+        
+        if (!this.processedOffers) {
+          this.processedOffers = new Set();
+        }
+        this.processedOffers.add(data.from);
+        
+        if (!this.peerConnection) {
+          await this.createPeerConnection();
+        }
+        
+        // Проверяем состояние соединения
+        if (this.peerConnection.signalingState === 'stable') {
+          console.log('Обрабатываем offer');
+          await this.peerConnection.setRemoteDescription(data.offer);
+          
+          // Добавляем отложенные ICE кандидаты
+          if (this.pendingIceCandidates && this.pendingIceCandidates.length > 0) {
+            console.log('Добавляем отложенные ICE кандидаты:', this.pendingIceCandidates.length);
+            for (const candidate of this.pendingIceCandidates) {
+              try {
+                await this.peerConnection.addIceCandidate(candidate);
+              } catch (error) {
+                console.error('Ошибка добавления отложенного ICE candidate:', error);
+              }
+            }
+            this.pendingIceCandidates = [];
+          }
+          
+          const answer = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answer);
+          
+          this.sendSignalingMessage({
+            type: 'answer',
+            answer: answer
+          });
+        } else if (this.peerConnection.signalingState === 'have-local-offer') {
+          console.log('У нас уже есть локальный offer, закрываем его и принимаем входящий');
+          this.peerConnection.close();
+          this.peerConnection = null;
+          
+          // Создаем новое соединение для ответа на входящий offer
+          await this.createPeerConnection();
+          await this.peerConnection.setRemoteDescription(data.offer);
+          
+          const answer = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answer);
+          
+          this.sendSignalingMessage({
+            type: 'answer',
+            answer: answer
+          });
+        } else {
+          console.log('Пропускаем offer, соединение в процессе, состояние:', this.peerConnection.signalingState);
+        }
+      }
+
+      async handleAnswer(data) {
+        console.log('Получен answer от:', data.from);
+        
+        // Проверяем, не обрабатывали ли мы уже этот answer
+        if (this.processedAnswers && this.processedAnswers.has(data.from)) {
+          console.log('Answer уже обработан, пропускаем');
+          return;
+        }
+        
+        if (!this.processedAnswers) {
+          this.processedAnswers = new Set();
+        }
+        this.processedAnswers.add(data.from);
+        
+        if (this.peerConnection && this.peerConnection.signalingState === 'have-local-offer') {
+          console.log('Устанавливаем remote description для answer');
+          await this.peerConnection.setRemoteDescription(data.answer);
+        } else {
+          console.log('Пропускаем answer, неподходящее состояние:', this.peerConnection?.signalingState);
+        }
+      }
+
+      async handleIceCandidate(data) {
+        if (this.peerConnection) {
+          // Проверяем, что remote description установлен
+          if (this.peerConnection.remoteDescription) {
+            try {
+              await this.peerConnection.addIceCandidate(data.candidate);
+              console.log('ICE candidate добавлен успешно');
+            } catch (error) {
+              console.error('Ошибка добавления ICE candidate:', error);
+            }
+          } else {
+            console.log('Откладываем ICE candidate, remote description не установлен');
+            // Сохраняем кандидата для добавления позже
+            if (!this.pendingIceCandidates) {
+              this.pendingIceCandidates = [];
+            }
+            this.pendingIceCandidates.push(data.candidate);
+          }
+        }
+      }
+
+      sendSignalingMessage(message) {
+        if (this.signalingSocket && this.signalingSocket.readyState === WebSocket.OPEN) {
+          this.signalingSocket.send(JSON.stringify(message));
+        }
+      }
+
+      stopTest() {
+        if (this.signalingSocket) {
+          this.signalingSocket.close();
+        }
+        if (this.peerConnection) {
+          this.peerConnection.close();
+        }
+        
+        this.localVideo.srcObject = null;
+        this.remoteVideo.srcObject = null;
+        
+        this.startTestBtn.disabled = false;
+        this.stopTestBtn.disabled = true;
+        this.testStatus.textContent = 'Тест остановлен';
+        
+        this.showNotification('Тест остановлен', 'success');
+      }
+
+      showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        this.notifications.appendChild(notification);
+        
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 3000);
+      }
+    }
+
+    // Инициализируем приложение
+    document.addEventListener('DOMContentLoaded', () => {
+      new WebRTCTestApp();
+    });
+  </script>
+</body>
+</html>
