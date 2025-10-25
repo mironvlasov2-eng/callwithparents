@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call With Parents - Бесплатные видеозвонки</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>👩‍👦 Call With Parents</h1>
+      <p>Бесплатные видеозвонки 1 на 1</p>
+    </header>
+
+    <div class="main-content">
+      <!-- Экран приветствия -->
+      <div id="welcomeScreen" class="screen active">
+        <div class="welcome-card">
+          <h2>Добро пожаловать!</h2>
+          <p>Создайте новую комнату или присоединитесь к существующей</p>
+          
+          <div class="action-buttons">
+            <button id="createRoomBtn" class="btn btn-primary">
+              📞 Создать комнату
+            </button>
+            <button id="joinRoomBtn" class="btn btn-secondary">
+              🔗 Присоединиться
+            </button>
+          </div>
+
+          <div class="fallback-info">
+            <p><small>Если возникают проблемы с подключением:</small></p>
+            <a href="simple.html" class="btn btn-secondary" style="font-size: 0.9rem;">
+              🧪 Простая версия (тест камеры)
+            </a>
+          </div>
+
+          <div id="joinForm" class="join-form hidden">
+            <input id="roomIdInput" type="text" placeholder="Введите ID комнаты" />
+            <button id="joinBtn" class="btn btn-primary">Присоединиться</button>
+            <button id="cancelJoinBtn" class="btn btn-secondary">Отмена</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Экран видеозвонка -->
+      <div id="callScreen" class="screen">
+        <div class="video-container">
+          <div class="video-wrapper">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div class="video-label">Участник</div>
+          </div>
+          
+          <div class="video-wrapper local-video">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="video-label">Вы</div>
+            <div class="video-controls">
+              <button id="toggleVideo" class="control-btn" title="Включить/выключить видео">
+                📹
+              </button>
+              <button id="toggleAudio" class="control-btn" title="Включить/выключить микрофон">
+                🎤
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="call-controls">
+          <button id="endCallBtn" class="btn btn-danger">
+            📞 Завершить звонок
+          </button>
+        </div>
+
+        <div class="call-info">
+          <p id="callStatus">Подключение...</p>
+          <p id="roomIdDisplay"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notifications" class="notifications"></div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
