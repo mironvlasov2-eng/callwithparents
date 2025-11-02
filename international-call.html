@@ -371,15 +371,33 @@
         }
         
         @media (max-width: 768px) {
+            .container {
+                overflow: hidden;
+            }
+            
+            .video-container {
+                height: calc(100vh - 80px - 70px);
+                overflow: hidden;
+            }
+            
             .video-grid {
                 grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
                 gap: 10px;
                 padding: 10px;
+                height: 100%;
+            }
+            
+            .video-wrapper {
+                min-height: 0;
+                overflow: hidden;
             }
             
             .controls {
                 bottom: 10px;
                 padding: 10px 20px;
+                position: fixed;
+                z-index: 50;
             }
             
             .control-btn {
@@ -390,6 +408,26 @@
             .control-btn svg {
                 width: 20px;
                 height: 20px;
+            }
+            
+            .header {
+                padding: 15px;
+                height: 80px;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .header p {
+                font-size: 0.9em;
+            }
+            
+            .status {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+                font-size: 12px;
             }
         }
     </style>
